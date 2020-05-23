@@ -2,11 +2,14 @@
 	path = atmos_cubed_sphere
 	url = https://github.com/NOAA-EMC/GFDL_atmos_cubed_sphere
 	branch = production/GFS.v16
+	ignore = untracked
 [submodule "ccpp/framework"]
 	path = ccpp/framework
 	url = https://github.com/NCAR/ccpp-framework
 	branch = master
+	ignore = untracked
 [submodule "ccpp/physics"]
 	path = ccpp/physics
 	url = https://github.com/NCAR/ccpp-physics
 	branch = master
+	ignore = untracked
