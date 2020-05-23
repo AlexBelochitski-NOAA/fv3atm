@@ -17,6 +17,9 @@ else
   PHYSP  = gfs
 endif
 
+ifeq ($(MACHINE_ID),hera)
+ COMP_SRCD=$(COMP_SRCDIR)
+endif
 #FFLAGS   += -I$(FMS_DIR) -I$(PHYSP)physics -Iipd -Icpl -Iio -Iatmos_cubed_sphere -Iccpp/driver -I../stochastic_physics
 FFLAGS   += -I$(FMS_DIR) -I$(PHYSP)physics -Iipd -Icpl -Iio -Iatmos_cubed_sphere -Iccpp/driver -I`dirname $(COMP_SRCD)`/stochastic_physics
 CPPDEFS  += -DESMF_VERSION_MAJOR=$(ESMF_VERSION_MAJOR)
