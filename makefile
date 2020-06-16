@@ -18,7 +18,7 @@ else
 endif
 
 #FFLAGS   += -I$(FMS_DIR) -I$(PHYSP)physics -Iipd -Icpl -Iio -Iatmos_cubed_sphere -Iccpp/driver -I../stochastic_physics
-FFLAGS   += -I$(FMS_DIR) -I$(PHYSP)physics -Iipd -Icpl -Iio -Iatmos_cubed_sphere -Iccpp/driver -I`dirname $(COMP_SRCD)`/stochastic_physics
+FFLAGS   += -I$(FMS_DIR) -I$(PHYSP)physics -Iipd -Icpl -Iio -Iatmos_cubed_sphere -Iccpp/driver -I`dirname $(COMP_SRCDIR)`/stochastic_physics
 CPPDEFS  += -DESMF_VERSION_MAJOR=$(ESMF_VERSION_MAJOR)
 
 # Flag to CCPP build for 32bit dynamics
