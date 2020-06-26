@@ -294,6 +294,10 @@
 !
       use module_radlw_avplank, only : totplnk
       use module_radlw_ref,     only : preflog, tref, chi_mls
+
+      use mpp_mod,            only: mpp_root_pe, mpp_clock_begin,       &
+     &    mpp_clock_id, CLOCK_COMPONENT, mpp_clock_end
+      use fms_mod,            only: clock_flag_default
 !
       implicit none
 !
@@ -383,6 +387,8 @@
 !  ---  the following variables are used for sub-column cloud scheme
 
       integer, parameter :: ipsdlw0 = ngptlw     ! initial permutation seed
+
+      integer :: lwClock, lwcldClock, lwcffClock, lwgasClock
 
 !  ---  public accessable subprograms
 
@@ -764,6 +770,7 @@
         stemp = sfgtmp(iplon)          ! surface ground temp
         if (iovrlw == 3) delgth= de_lgth(iplon)    ! clouds decorr-length
 
+        call mpp_clock_begin(lwcldClock)
 !> -# Prepare atmospheric profile for use in rrtm.
 !           the vertical index of internal array is from surface to top
 
@@ -1071,6 +1078,7 @@
           taucld = f_zero
         endif
 
+        call mpp_clock_end(lwcldClock)
 !     if (lprnt) then
 !      print *,' after cldprop'
 !      print *,' clwp',clwp
@@ -1081,6 +1089,7 @@
 !      print *,' cldfrac',cldfrc
 !     endif
 
+        call mpp_clock_begin(lwcffClock)
 !> -# Calling setcoef() to compute various coefficients needed in
 !!    radiative transfer calculations.
         call setcoef                                                    &
@@ -1093,6 +1102,8 @@
      &       selffac,selffrac,indself,forfac,forfrac,indfor,            &
      &       minorfrac,scaleminor,scaleminorn2,indminor                 &
      &     )
+
+        call mpp_clock_end(lwcffClock)
 
 !     if (lprnt) then
 !      print *,'laytrop',laytrop
@@ -1119,6 +1130,7 @@
 !> -# Call taumol() to calculte the gaseous optical depths and Plank 
 !! fractions for each longwave spectral band.
 
+        call mpp_clock_begin(lwgasClock)
         call taumol                                                     &
 !  ---  inputs:
      &     ( laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,              &
@@ -1129,6 +1141,7 @@
 !  ---  outputs:
      &       fracs, tautot                                              &
      &     )
+        call mpp_clock_end(lwgasClock)
 
 !     if (lprnt) then
 !     print *,' after taumol'
@@ -1152,6 +1165,8 @@
 !!                     overlaping in a vertical column;
 !!\n  - call rtrnmc(): clouds are treated with the mcica stochastic
 !!                     approach.
+
+        call mpp_clock_begin(lwClock)
 
         if (isubclw <= 0) then
 
@@ -1188,6 +1203,8 @@
      &     )
 
         endif   ! end if_isubclw_block
+
+        call mpp_clock_end(lwClock)
 
 !> -# Save outputs.
 
@@ -1475,6 +1492,15 @@
      &               - ( exp_tbl(i) / (f_one - exp_tbl(i)) ) )
         endif
       enddo
+
+      lwClock    = mpp_clock_id( 'LW Radiative Transfer ',                 & 
+     &  flags=clock_flag_default, grain=CLOCK_COMPONENT )
+      lwcldClock = mpp_clock_id( 'LW Cloud Optical Prprt',                 & 
+     &  flags=clock_flag_default, grain=CLOCK_COMPONENT )
+      lwcffClock = mpp_clock_id( 'LW Coeff Calculation  ',                 & 
+     &  flags=clock_flag_default, grain=CLOCK_COMPONENT )
+      lwgasClock = mpp_clock_id( 'LW Gas Optical Prprt  ',                 & 
+     &  flags=clock_flag_default, grain=CLOCK_COMPONENT )
 
 !...................................
       end subroutine rlwinit

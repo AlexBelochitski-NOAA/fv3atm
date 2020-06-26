@@ -423,6 +423,10 @@
      &                             random_stat
       use module_radsw_ref, only : preflog, tref
       use module_radsw_sflux
+
+      use mpp_mod,            only: mpp_root_pe, mpp_clock_begin,       & 
+     &   mpp_clock_id, CLOCK_COMPONENT,mpp_clock_end
+      use fms_mod,            only: clock_flag_default
 !
       implicit none
 !
@@ -508,6 +512,7 @@
 !> initial permutation seed used for sub-column cloud scheme
       integer, parameter :: ipsdsw0 = 1
 
+      integer :: swClock, swcldClock, swcffClock, swgasClock
 !  ---  public accessable subprograms
 
       public swrad, rswinit
@@ -921,6 +926,7 @@
         albbm(2) = sfcalb(j1,3)
         albdf(2) = sfcalb(j1,4)
 
+        call mpp_clock_begin(swcldClock)
 !> -# Prepare atmospheric profile for use in rrtm.
 !           the vertical index of internal array is from surface to top
 
@@ -1175,8 +1181,9 @@
               asycw(k,i) = f_zero
             enddo
           enddo
-        endif   ! end if_zcf1_block
-
+       endif                    ! end if_zcf1_block
+       call mpp_clock_end(swcldClock)
+       call mpp_clock_begin(swcffClock)
 !> -# Call setcoef() to compute various coefficients needed in
 !!    radiative transfer calculations.
         call setcoef                                                    &
@@ -1186,9 +1193,10 @@
      &       laytrop,jp,jt,jt1,fac00,fac01,fac10,fac11,                 &
      &       selffac,selffrac,indself,forfac,forfrac,indfor             &
      &     )
-
+       call mpp_clock_end(swcffClock)
 !> -# Call taumol() to calculate optical depths for gaseous absorption
 !!    and rayleigh scattering
+       call mpp_clock_begin(swgasClock)
         call taumol                                                     &
 !  ---  inputs:
      &     ( colamt,colmol,fac00,fac01,fac10,fac11,jp,jt,jt1,laytrop,   &
@@ -1196,12 +1204,14 @@
 !  ---  outputs:
      &       sfluxzen, taug, taur                                       &
      &     )
-
+        call mpp_clock_end(swgasClock)
 !> -# Call the 2-stream radiation transfer model:
 !!    - if physparam::isubcsw .le.0, using standard cloud scheme,
 !!      call spcvrtc().
 !!    - if physparam::isubcsw .gt.0, using mcica cloud scheme,
 !!      call spcvrtm().
+
+        call mpp_clock_begin(swClock)
 
         if ( isubcsw <= 0 ) then     ! use standard cloud scheme
 
@@ -1230,6 +1240,8 @@
      &     )
 
         endif
+
+        call mpp_clock_end(swClock)
 
 !> -# Save outputs.
 !  --- ...  sum up total spectral fluxes for total-sky
@@ -1555,6 +1567,16 @@
         tau = bpade * tfn
         exp_tbl(i) = exp( -tau )
       enddo
+
+      swClock    = mpp_clock_id( 'SW Radiative Transfer ',                 &   
+     &  flags=clock_flag_default, grain=CLOCK_COMPONENT )
+      swcldClock = mpp_clock_id( 'SW Cloud Optical Prprt',                 & 
+     &  flags=clock_flag_default, grain=CLOCK_COMPONENT )
+      swcffClock = mpp_clock_id( 'SW Coeff Calculation  ',                 & 
+     &  flags=clock_flag_default, grain=CLOCK_COMPONENT )
+      swgasClock = mpp_clock_id( 'SW Gas Optical Prprt  ',                 & 
+     &  flags=clock_flag_default, grain=CLOCK_COMPONENT )
+
 
       return
 !...................................

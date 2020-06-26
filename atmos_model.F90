@@ -161,7 +161,9 @@ public addLsmask2grid
 !</PUBLICTYPE >
 
 integer :: fv3Clock, getClock, updClock, setupClock, radClock, physClock
-
+!<aab
+integer :: lwClock, swClock
+!>aab
 !-----------------------------------------------------------------------
 integer :: blocksize    = 1
 logical :: chksum_debug = .false.
