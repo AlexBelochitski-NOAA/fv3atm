@@ -649,6 +649,8 @@ module GFS_typedefs
     logical              :: lwhtr           !< flag to output lw heating rate (Radtend%lwhc)
     logical              :: swhtr           !< flag to output sw heating rate (Radtend%swhc)
 
+    logical              :: gen_nn_training_set_phys  !< Flag for generation of NN training data set for full physics
+
 !--- microphysical switch
     integer              :: ncld            !< choice of cloud scheme
     !--- new microphysical switch
@@ -1482,6 +1484,15 @@ module GFS_typedefs
 
     !--- MP quantities for 3D diagnositics 
     real (kind=kind_phys), pointer :: refl_10cm(:,:) => null()  !< instantaneous refl_10cm 
+
+!--- Instantaneous profiles for NN full physics training data set
+!--- NN inputs
+
+    real (kind=kind_phys), pointer :: NNRad_solcon(:)      => null()  !<solar constant
+    real (kind=kind_phys), pointer :: NNRad_year(:)        => null()  !<current year
+    real (kind=kind_phys), pointer :: NNRad_month(:)       => null()  !<current month
+
+
 !
 !---vay-2018 UGWP-diagnostics daily mean
 !
@@ -2771,6 +2782,8 @@ module GFS_typedefs
     logical              :: lwhtr             = .true.       !< flag to output lw heating rate (Radtend%lwhc)
     logical              :: swhtr             = .true.       !< flag to output sw heating rate (Radtend%swhc)
 
+    logical              :: gen_nn_training_set_phys  = .false.   !< Flag for generation of NN training data set for full physics
+
 !--- Z-C microphysical parameters
     integer              :: ncld              =  1                 !< choice of cloud scheme
     integer              :: imp_physics       =  99                !< choice of cloud scheme
@@ -3107,6 +3120,7 @@ module GFS_typedefs
                                fhswr, fhlwr, levr, nfxr, aero_in, iflip, isol, ico2, ialb,  &
                                isot, iems, iaer, icliq_sw, iovr_sw, iovr_lw, ictm, isubc_sw,&
                                isubc_lw, crick_proof, ccnorm, lwhtr, swhtr,                 &
+                               gen_nn_training_set_phys,                                    &
                           ! IN CCN forcing
                                iccn,                                                        &
                           !--- microphysical parameterizations
@@ -3364,6 +3378,8 @@ module GFS_typedefs
       stop
     end if
 #endif
+
+    Model%gen_nn_training_set_phys  = gen_nn_training_set_phys
 
 !--- microphysical switch
     Model%ncld             = ncld
@@ -4453,6 +4469,7 @@ module GFS_typedefs
       print *, ' norad_precip      : ', Model%norad_precip
       print *, ' lwhtr             : ', Model%lwhtr
       print *, ' swhtr             : ', Model%swhtr
+      print *, ' gen_nn_training_set_phys : ', Model%gen_nn_training_set_phys
       print *, ' '
       print *, 'microphysical switch'
       print *, ' ncld              : ', Model%ncld
@@ -5270,6 +5287,10 @@ module GFS_typedefs
     !--- 3D diagnostics for Thompson MP / GFDL MP
     allocate (Diag%refl_10cm(IM,Model%levs))
 
+    allocate (Diag%NNRad_solcon(IM))
+    allocate (Diag%NNRad_year(IM))
+    allocate (Diag%NNRad_month(IM))
+
     !--  New max hourly diag.
     allocate (Diag%refdmax(IM))
     allocate (Diag%refdmax263k(IM))
@@ -5373,6 +5394,11 @@ module GFS_typedefs
     if (Model%ldiag3d) then
       Diag%cldcov     = zero
     endif
+
+    Diag%NNRad_solcon      = zero
+    Diag%NNRad_year        = zero
+    Diag%NNRad_month       = zero
+
 
   end subroutine diag_rad_zero
 

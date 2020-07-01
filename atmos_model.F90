@@ -116,6 +116,12 @@ use fv_iau_mod,         only: iau_external_data_type,getiauforcing,iau_initializ
 use module_fv3_config,  only: output_1st_tstep_rst, first_kdt, nsout,    &
                               frestart, restart_endfcst
 
+use machine,            only: kind_phys
+use neuralphys,         only: init_phys_nn_emulator, phys_nn_emulation
+use physics_abstraction_layer, only: statein_type,  stateout_type,         &
+                                       sfcprop_type
+
+
 !-----------------------------------------------------------------------
 
 implicit none
@@ -161,6 +167,7 @@ public addLsmask2grid
 !</PUBLICTYPE >
 
 integer :: fv3Clock, getClock, updClock, setupClock, radClock, physClock
+integer :: nnphysClock, updnnphysClock
 
 !-----------------------------------------------------------------------
 integer :: blocksize    = 1
@@ -211,6 +218,8 @@ type(iau_external_data_type)        :: IAU_Data ! number of blocks
 !-----------------
 type (block_control_type), target   :: Atm_block
 
+type(stateout_type), allocatable :: Stateout_tmp(:) ! number of blocks
+type(sfcprop_type ), allocatable :: Sfcprop_tmp(:)  ! number of blocks
 !-----------------------------------------------------------------------
 
 character(len=128) :: version = '$Id$'
@@ -256,7 +265,7 @@ subroutine update_atmos_radiation_physics (Atmos)
 !-----------------------------------------------------------------------
   type (atmos_data_type), intent(in) :: Atmos
 !--- local variables---
-    integer :: nb, jdat(8), rc
+    integer :: nb, jdat(8), rc, i
     procedure(IPD_func0d_proc), pointer :: Func0d => NULL()
     procedure(IPD_func1d_proc), pointer :: Func1d => NULL()
     integer :: nthrds
@@ -332,7 +341,70 @@ subroutine update_atmos_radiation_physics (Atmos)
       endif
 
       call mpp_clock_end(setupClock)
+!<aab
+!      if(IPD_Control%do_full_phys_nn) then
+!      if (debug) write(6,*) "Calling NN"
 
+if (.false.) then
+      call mpp_clock_begin(nnphysClock)
+
+       do nb = 1,Atm_block%nblks
+          do i = 1, Atm_block%blksz(nb)
+             call phys_nn_emulation(IPD_Data(nb)%Statein%pgr(i),      &
+                                    IPD_Data(nb)%Statein%phil(i,:),   &
+                                    IPD_Data(nb)%Statein%prsl(i,:),   &
+                                    IPD_Data(nb)%Statein%ugrs(i,:),   &
+                                    IPD_Data(nb)%Statein%vgrs(i,:),  &
+                                    IPD_Data(nb)%Statein%vvl(i,:),    &
+                                    IPD_Data(nb)%Statein%tgrs(i,:),   &
+                                    IPD_Data(nb)%Statein%qgrs(i,:,1), &
+                                    IPD_Data(nb)%Statein%qgrs(i,:,IPD_Control%ntcw), &
+                                    IPD_Data(nb)%Statein%qgrs(i,:,IPD_Control%ntoz), &
+                                    IPD_Data(nb)%Statein%smc(i,:),      &
+                                    IPD_Data(nb)%Statein%slc(i,:),      &
+                                    IPD_Data(nb)%Statein%stc(i,:),      &
+                                    IPD_Data(nb)%Sfcprop%tsfc(i),      &
+                                    IPD_Data(nb)%Sfcprop%canopy(i),      &
+                                    IPD_Data(nb)%Sfcprop%hice(i),      &
+                                    IPD_Data(nb)%Sfcprop%weasd(i),      &
+!                                    real(jdat(5), kind_phys), & ! fhour
+!                                    real(jdat(3), kind_phys), & ! doy
+                                    real(IPD_Control%fhour, kind_phys), &
+                                    real(IPD_Control%julian - 18000, kind_phys), &
+                                    real(jdat(2), kind_phys), &
+                                    IPD_Data(nb)%Grid%xlon(i),      &                                   
+                                    IPD_Data(nb)%Grid%xlat(i),      &                                   
+                                    IPD_Data(nb)%Radtend%coszen(i),      &                                   
+                                    IPD_Control%solcon,      &                                   
+!Outputs
+                                    Stateout_tmp(nb)%gu0(i,:),      &
+                                    Stateout_tmp(nb)%gv0(i,:),      &
+                                    Stateout_tmp(nb)%gt0(i,:),      &
+                                    Stateout_tmp(nb)%gq0(i,:,1),      &                                    
+                                    Stateout_tmp(nb)%gq0(i,:,IPD_Control%ntcw),      & 
+                                    Stateout_tmp(nb)%gq0(i,:,IPD_Control%ntoz),      & 
+                                    Sfcprop_tmp(nb)%smc(i,:),      &
+                                    Sfcprop_tmp(nb)%slc(i,:),      &
+                                    Sfcprop_tmp(nb)%stc(i,:),      &
+                                    Sfcprop_tmp(nb)%tsfc(i),      &
+                                    Sfcprop_tmp(nb)%canopy(i),      &
+                                    Sfcprop_tmp(nb)%hice(i),      &
+                                    Sfcprop_tmp(nb)%weasd(i))
+!            where  ( Stateout_tmp(nb)%gq0(i,:,IPD_Control%ntcw)<0. ) 
+!           where  ( Stateout_tmp(nb)%gq0(i,:,:)<0. ) 
+               
+!               Stateout_tmp(nb)%gq0(i,:,1) = Stateout_tmp(nb)%gq0(i,:,1) + Stateout_tmp(nb)%gq0(i,:,IPD_Control%ntcw)
+!               Stateout_tmp(nb)%gq0(i,:,:) = 0.
+               
+!            end where
+
+          enddo
+       enddo
+       call mpp_clock_end(nnphysClock)
+!      if (debug) write(6,*) "Returned from NN"
+endif
+!if (.true.) then 
+!>aab
       if (mpp_pe() == mpp_root_pe() .and. debug) write(6,*) "radiation driver"
 
 !--- execute the IPD atmospheric radiation subcomponent (RRTM)
@@ -413,6 +485,28 @@ subroutine update_atmos_radiation_physics (Atmos)
       call getiauforcing(IPD_Control,IAU_data)
       if (mpp_pe() == mpp_root_pe() .and. debug) write(6,*) "end of radiation and physics step"
     endif
+
+
+if (.false.) then 
+   call mpp_clock_begin(updnnphysClock)
+    IPD_Data(:)%Stateout = Stateout_tmp
+   call mpp_clock_end(updnnphysClock)
+endif
+!       do nb = 1,Atm_block%nblks
+!          do i = 1, Atm_block%blksz(nb)
+!      
+!!             IPD_Data(nb)%Sfcprop%smc(i,:)  = Sfcprop_tmp(nb)%smc(i,:)  
+!             IPD_Data(nb)%Sfcprop%smc(i,:)   = Sfcprop_tmp(nb)%smc(i,:)    
+!             IPD_Data(nb)%Sfcprop%slc(i,:)  = Sfcprop_tmp(nb)%slc(i,:)  
+!             IPD_Data(nb)%Sfcprop%stc(i,:)   = Sfcprop_tmp(nb)%stc(i,:)  
+!            IPD_Data(nb)%Sfcprop%tsfc(i)  = Sfcprop_tmp(nb)%tsfc(i)
+!             IPD_Data(nb)%Sfcprop%canopy(i) = Sfcprop_tmp(nb)%canopy(i)
+!             IPD_Data(nb)%Sfcprop%hice(i) = Sfcprop_tmp(nb)%hice(i)
+!             IPD_Data(nb)%Sfcprop%weasd(i) = Sfcprop_tmp(nb)%weasd(i)
+!
+!          enddo
+!       enddo
+
 
 #ifdef CCPP
     ! Update flag for first time step of time integration
@@ -622,6 +716,22 @@ subroutine atmos_model_init (Atmos, Time_init, Time, Time_step)
    call IPD_initialize (IPD_Control, IPD_Data, IPD_Diag, IPD_Restart, Init_parm)
 #endif
 
+!   if ( IPD_Control%do_full_phys_nn) &
+   call  init_phys_nn_emulator(Init_parm%me)
+
+   allocate(Stateout_tmp(Atm_block%nblks))
+   allocate(Sfcprop_tmp(Atm_block%nblks))
+   do i = 1,size(Init_parm%blksz)
+      j = Init_parm%blksz(i)
+      call Stateout_tmp (i)%create (j, IPD_Control)
+      call Sfcprop_tmp  (i)%create (j, IPD_Control)
+   enddo
+
+   nnphysClock     = mpp_clock_id( 'NN Physics            ', flags=clock_flag_default, grain=CLOCK_COMPONENT )
+   updnnphysClock  = mpp_clock_id( 'Copy NN Physics Output', flags=clock_flag_default, grain=CLOCK_COMPONENT )
+
+!endif
+
    if (IPD_Control%do_sppt .OR. IPD_Control%do_shum .OR. IPD_Control%do_skeb .OR. IPD_Control%do_sfcperts) then
       ! Initialize stochastic physics
       call init_stochastic_physics(IPD_Control, Init_parm, mpp_npes(), nthrds)
@@ -728,9 +838,16 @@ subroutine atmos_model_init (Atmos, Time_init, Time, Time_step)
        enddo
      else
        maxh  = fhmax / fhout
-       do i = 2, maxh
-         fdiag(i) = fdiag(i-1) + fhout
+!<aab
+!       do i = 2, maxh
+!         fdiag(i) = fdiag(i-1) + fhout
+!       enddo
+       fdiag(2) = fdiag(1) + dt_phys / 3600.
+       do i = 3, 2*maxh, 2
+         fdiag(i) = fdiag(i-2) + fhout
+         fdiag(i+1) = fdiag(i) + dt_phys / 3600.
        enddo
+!>aab
      endif
    endif
    if (mpp_pe() == mpp_root_pe()) write(6,*) "---fdiag",fdiag(1:40)

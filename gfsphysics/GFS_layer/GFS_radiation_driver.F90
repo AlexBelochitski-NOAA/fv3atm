@@ -2151,6 +2151,11 @@
 
       endif                                ! end_if_lssav
 !*## CCPP ##
+
+      Diag%NNRad_solcon      = Model%solcon
+      Diag%NNRad_year        = Model%jdat(1)
+      Diag%NNRad_month       = Model%jdat(2)
+
       return
 !........................................
       end subroutine GFS_radiation_driver

@@ -637,7 +637,10 @@
               if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=__LINE__, file=__FILE__)) return
 !
 ! get output file name
-              call ESMF_AttributeGet(fcstField(i), convention="NetCDF", purpose="FV3", &
+! get output file name
+! alex belochitski: there's a typo in the fcstField index, it affects certain custom output configurations
+!             call ESMF_AttributeGet(fcstField(i), convention="NetCDF", purpose="FV3", &
+              call ESMF_AttributeGet(fcstField(j), convention="NetCDF", purpose="FV3", &
                                      name="output_file", value=outfile_name, rc=rc)
 
               if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=__LINE__, file=__FILE__)) return
@@ -1304,16 +1307,19 @@
       nf_minutes = int((nf_seconds-nf_hours*3600.)/60.)
       nseconds   = int(nf_seconds-nf_hours*3600.-nf_minutes*60.)
 !      if (nf_seconds-nf_hours*3600 > 0 .and. nsout > 0) then
-      if (nsout > 0) then
+!<aab
+!      if (nsout > 0) then
         ndig = max(log10(nf_hours+0.5)+1., 3.)
         write(cform, '("(I",I1,".",I1,",A1,I2.2,A1,I2.2)")') ndig, ndig
         write(cfhour, cform) nf_hours,':',nf_minutes,':',nseconds
-      else
-        ndig = max(log10(nf_hours+0.5)+1., 3.)
-        write(cform, '("(I",I1,".",I1,")")') ndig, ndig
-        write(cfhour, cform) nf_hours
-      endif
+!      else
+!        ndig = max(log10(nf_hours+0.5)+1., 3.)
+!        write(cform, '("(I",I1,".",I1,")")') ndig, ndig
+!        write(cfhour, cform) nf_hours
+!      endif
+!>aab
 !
+
        if(lprnt) print *,'in wrt run, nf_hours=',nf_hours,nf_minutes,nseconds, &
                 'nseconds_num=',nseconds_num,nseconds_den,' FBCount=',FBCount,' cfhour=',trim(cfhour)
 

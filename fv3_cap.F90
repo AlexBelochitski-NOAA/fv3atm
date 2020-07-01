@@ -835,7 +835,8 @@ module fv3gfs_cap_mod
       alarm_output = ESMF_AlarmCreate(clock_fv3, name  ='ALARM_OUTPUT',    &
                                       ringTime         =alarm_output_ring, & !<-- Forecast/Restart start time (ESMF)
                                       ringInterval     =output_interval,   & !<-- Time interval between
-                                      ringTimeStepCount=1,                 & !<-- The Alarm rings for this many timesteps
+!                                      ringTimeStepCount=1,                 & !<-- The Alarm rings for this many timesteps
+                                      ringTimeStepCount=2,                 & !<-- The Alarm rings for this many timesteps
                                       sticky           =.false.,           & !<-- Alarm does not ring until turned off
                                       rc               =RC)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=__LINE__, file=__FILE__)) return

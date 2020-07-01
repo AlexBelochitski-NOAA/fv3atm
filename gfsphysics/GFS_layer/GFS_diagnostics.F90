@@ -1950,6 +1950,434 @@ module GFS_diagnostics
     enddo
 
     idx = idx + 1
+     ExtDiag(idx)%axes = 2
+     ExtDiag(idx)%name = 'solcon'
+     ExtDiag(idx)%desc = 'solar constant'
+     ExtDiag(idx)%unit = 'w/m**2'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+!     ExtDiag(idx)%intpl_method = 'bilinear'                                                                                                
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+!        IntDiag(nb)%NNRad_solcon = Model%solcon
+        ExtDiag(idx)%data(nb)%var2 => IntDiag(nb)%NNRad_solcon(:)
+     enddo
+
+
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 2
+     ExtDiag(idx)%name = 'year'
+     ExtDiag(idx)%desc = 'current year'
+     ExtDiag(idx)%unit = ' '
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+!     ExtDiag(idx)%intpl_method = 'bilinear'                                                                                                
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+!        IntDiag(nb)%NNRad_year = Model%jdat(1)
+        ExtDiag(idx)%data(nb)%var2 => IntDiag(nb)%NNRad_year(:)
+     enddo
+
+
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 2
+     ExtDiag(idx)%name = 'month'
+     ExtDiag(idx)%desc = 'current month'
+     ExtDiag(idx)%unit = ' '
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+!     ExtDiag(idx)%intpl_method = 'bilinear' 
+
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+!        IntDiag(nb)%NNRad_month = Model%jdat(2)
+        ExtDiag(idx)%data(nb)%var2 => IntDiag(nb)%NNRad_month(:)
+     enddo
+
+!     IntDiag(nb)%NNRad_lat(:) = Grid%xlat
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 2
+     ExtDiag(idx)%name = 'lat'
+     ExtDiag(idx)%desc = 'lattitude'
+     ExtDiag(idx)%unit = 'radian'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+!     ExtDiag(idx)%intpl_method = 'bilinear'  
+
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var2 => Grid(nb)%xlat(:) !IntDiag(nb)%NNRad_lat(:)
+     enddo
+
+!     IntDiag(nb)%NNRad_lon(:) = Grid%xlon
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 2
+     ExtDiag(idx)%name = 'lon'
+     ExtDiag(idx)%desc = 'longitude'
+     ExtDiag(idx)%unit = 'radian'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+!     ExtDiag(idx)%intpl_method = 'bilinear'     
+
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var2 => Grid(nb)%xlon(:) ! IntDiag(nb)%NNRad_lon(:)
+     enddo
+
+!     IntDiag(nb)%NNRad_cosz(:) = Radtend%coszen
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 2
+     ExtDiag(idx)%name = 'cosz'
+     ExtDiag(idx)%desc = 'cosine of the zenith angle'
+     ExtDiag(idx)%unit = '-'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+!     ExtDiag(idx)%intpl_method = 'bilinear'                
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var2 =>  Radtend(nb)%coszen(:) !IntDiag(nb)%NNRad_cosz(:)
+     enddo
+
+    idx = idx + 1
+    ExtDiag(idx)%axes = 3
+    ExtDiag(idx)%name = 'phii'
+    ExtDiag(idx)%desc = 'interface geopotential height'
+    ExtDiag(idx)%unit = 'm**2/s**2'
+    ExtDiag(idx)%mod_name = 'gfs_phys'
+    !     ExtDiag(idx)%intpl_method = 'bilinear'
+    allocate (ExtDiag(idx)%data(nblks))
+    do nb = 1,nblks
+       ExtDiag(idx)%data(nb)%var3 => Statein(nb)%phii(:,:) ! IntDiag(nb)%NNPhys_phii(:,:)
+    enddo
+
+    idx = idx + 1
+    ExtDiag(idx)%axes = 3
+    ExtDiag(idx)%name = 'prsi'
+    ExtDiag(idx)%desc = 'interface pressure'
+    ExtDiag(idx)%unit = 'Pa'
+    ExtDiag(idx)%mod_name = 'gfs_phys'
+    !     ExtDiag(idx)%intpl_method = 'bilinear'
+    allocate (ExtDiag(idx)%data(nblks))
+    do nb = 1,nblks
+       ExtDiag(idx)%data(nb)%var3 => Statein(nb)%prsi(:,:) !IntDiag(nb)%NNPhys_prsi(:,:)
+    enddo
+
+    idx = idx + 1
+    ExtDiag(idx)%axes = 3
+    ExtDiag(idx)%name = 'phil'
+    ExtDiag(idx)%desc = 'layer geopotential height'
+    ExtDiag(idx)%unit = 'm**2/s**2'
+    ExtDiag(idx)%mod_name = 'gfs_phys'
+    !     ExtDiag(idx)%intpl_method = 'bilinear'
+    allocate (ExtDiag(idx)%data(nblks))
+    do nb = 1,nblks
+       ExtDiag(idx)%data(nb)%var3 => Statein(nb)%phil(:,:) !IntDiag(nb)%NNPhys_phil(:,:)
+    enddo
+
+    idx = idx + 1
+    ExtDiag(idx)%axes = 3
+    ExtDiag(idx)%name = 'prsl'
+    ExtDiag(idx)%desc = 'layer pressure'
+    ExtDiag(idx)%unit = 'Pa'
+    ExtDiag(idx)%mod_name = 'gfs_phys'
+    !     ExtDiag(idx)%intpl_method = 'bilinear'
+    allocate (ExtDiag(idx)%data(nblks))
+    do nb = 1,nblks
+       ExtDiag(idx)%data(nb)%var3 => Statein(nb)%prsl(:,:) ! IntDiag(nb)%NNPhys_prsl(:,:)
+    enddo
+
+    idx = idx + 1
+    ExtDiag(idx)%axes = 2
+    ExtDiag(idx)%name = 'pgr'
+    ExtDiag(idx)%desc = 'surface pressure'
+    ExtDiag(idx)%unit = 'Pa'
+    ExtDiag(idx)%mod_name = 'gfs_phys'
+    !     ExtDiag(idx)%intpl_method = 'bilinear'
+    allocate (ExtDiag(idx)%data(nblks))
+    do nb = 1,nblks
+       ExtDiag(idx)%data(nb)%var2 => Statein(nb)%pgr(:) ! IntDiag(nb)%NNPhys_pgr(:,:)
+    enddo
+
+    idx = idx + 1
+    ExtDiag(idx)%axes = 3
+    ExtDiag(idx)%name = 'ugrs'
+    ExtDiag(idx)%desc = 'u component of layer wind'
+    ExtDiag(idx)%unit = 'm/s'
+    ExtDiag(idx)%mod_name = 'gfs_phys'
+    !     ExtDiag(idx)%intpl_method = 'bilinear'
+    allocate (ExtDiag(idx)%data(nblks))
+    do nb = 1,nblks
+       ExtDiag(idx)%data(nb)%var3 => Statein(nb)%ugrs(:,:) ! IntDiag(nb)%NNPhys_ugrs(:,:)
+    enddo
+
+    idx = idx + 1
+    ExtDiag(idx)%axes = 3
+    ExtDiag(idx)%name = 'vgrs'
+    ExtDiag(idx)%desc = 'v component of layer wind'
+    ExtDiag(idx)%unit = 'm/s'
+    ExtDiag(idx)%mod_name = 'gfs_phys'
+    !     ExtDiag(idx)%intpl_method = 'bilinear'
+    allocate (ExtDiag(idx)%data(nblks))
+    do nb = 1,nblks
+       ExtDiag(idx)%data(nb)%var3 => Statein(nb)%vgrs(:,:)  !IntDiag(nb)%NNPhys_vgrs(:,:)
+    enddo
+
+    idx = idx + 1
+    ExtDiag(idx)%axes = 3
+    ExtDiag(idx)%name = 'vvl'
+    ExtDiag(idx)%desc = 'layer mean vertical velocity'
+    ExtDiag(idx)%unit = 'm/s'
+    ExtDiag(idx)%mod_name = 'gfs_phys'
+    !     ExtDiag(idx)%intpl_method = 'bilinear'
+    allocate (ExtDiag(idx)%data(nblks))
+    do nb = 1,nblks
+       ExtDiag(idx)%data(nb)%var3 => Statein(nb)%vvl(:,:) ! IntDiag(nb)%NNPhys_vvl(:,:)
+    enddo
+
+    idx = idx + 1
+    ExtDiag(idx)%axes = 3
+    ExtDiag(idx)%name = 'tgrs'
+    ExtDiag(idx)%desc = 'layer temeprature'
+    ExtDiag(idx)%unit = 'K'
+    ExtDiag(idx)%mod_name = 'gfs_phys'
+    !     ExtDiag(idx)%intpl_method = 'bilinear'
+    allocate (ExtDiag(idx)%data(nblks))
+    do nb = 1,nblks
+       ExtDiag(idx)%data(nb)%var3 => Statein(nb)%tgrs(:,:) ! IntDiag(nb)%NNPhys_tgrs(:,:)
+    enddo
+
+    idx = idx + 1
+    ExtDiag(idx)%axes = 3
+    ExtDiag(idx)%name = 'sphum'
+    ExtDiag(idx)%desc = 'specific humidity'
+    ExtDiag(idx)%unit = 'kg/kg'
+    ExtDiag(idx)%mod_name = 'gfs_phys'
+    !     ExtDiag(idx)%intpl_method = 'bilinear'
+    allocate (ExtDiag(idx)%data(nblks))
+    do nb = 1,nblks
+       ExtDiag(idx)%data(nb)%var3 => Statein(nb)%qgrs(:,:,1) !IntDiag(nb)%NNPhys_sphum(:,:)
+    enddo
+
+    idx = idx + 1
+    ExtDiag(idx)%axes = 3
+    ExtDiag(idx)%name = 'liq_wat'
+    ExtDiag(idx)%desc = 'cloud water mixing ratio'
+    ExtDiag(idx)%unit = 'kg/kg'
+    ExtDiag(idx)%mod_name = 'gfs_phys'
+    !     ExtDiag(idx)%intpl_method = 'bilinear'
+    allocate (ExtDiag(idx)%data(nblks))
+    do nb = 1,nblks
+       ExtDiag(idx)%data(nb)%var3 => Statein(nb)%qgrs(:,:,Model%ntcw) ! IntDiag(nb)%NNPhys_liqwat(:,:)
+    enddo
+
+!    idx = idx + 1
+!    ExtDiag(idx)%axes = 3
+!    ExtDiag(idx)%name = 'rainwat'
+!    ExtDiag(idx)%desc = 'rain mixing ratio'
+!    ExtDiag(idx)%unit = 'kg/kg'
+!    ExtDiag(idx)%mod_name = 'gfs_phys'
+!    !     ExtDiag(idx)%intpl_method = 'bilinear'
+!    allocate (ExtDiag(idx)%data(nblks))
+!    do nb = 1,nblks
+!       ExtDiag(idx)%data(nb)%var3 => Statein(nb)%qgrs(:,:,Model%ntrw) ! IntDiag(nb)%NNPhys_rainwat(:,:)
+!    enddo
+
+
+!    idx = idx + 1
+!    ExtDiag(idx)%axes = 3
+!    ExtDiag(idx)%name = 'ice_wat'
+!    ExtDiag(idx)%desc = 'ice mixing ratio'
+!    ExtDiag(idx)%unit = 'kg/kg'
+!    ExtDiag(idx)%mod_name = 'gfs_phys'
+!    !     ExtDiag(idx)%intpl_method = 'bilinear'
+!    allocate (ExtDiag(idx)%data(nblks))
+!    do nb = 1,nblks
+!       ExtDiag(idx)%data(nb)%var3 => Statein(nb)%qgrs(:,:,Model%ntiw) ! IntDiag(nb)%NNPhys_icewat(:,:)
+!    enddo
+
+!    idx = idx + 1
+!    ExtDiag(idx)%axes = 3
+!    ExtDiag(idx)%name = 'snowwat'
+!    ExtDiag(idx)%desc = 'snow mixing ratio'
+!    ExtDiag(idx)%unit = 'kg/kg'
+!    ExtDiag(idx)%mod_name = 'gfs_phys'
+    !     ExtDiag(idx)%intpl_method = 'bilinear'
+!    allocate (ExtDiag(idx)%data(nblks))
+!    do nb = 1,nblks
+!       ExtDiag(idx)%data(nb)%var3 => Statein(nb)%qgrs(:,:,Model%ntsw) ! IntDiag(nb)%NNPhys_snowwat(:,:)
+!    enddo
+
+!    idx = idx + 1
+!    ExtDiag(idx)%axes = 3
+!    ExtDiag(idx)%name = 'graupl'
+!    ExtDiag(idx)%desc = 'snow mixing ratio'
+!    ExtDiag(idx)%unit = 'kg/kg'
+!    ExtDiag(idx)%mod_name = 'gfs_phys'
+!    !     ExtDiag(idx)%intpl_method = 'bilinear'
+!    allocate (ExtDiag(idx)%data(nblks))
+!    do nb = 1,nblks
+!       ExtDiag(idx)%data(nb)%var3 => Statein(nb)%qgrs(:,:,Model%ntgl)  !IntDiag(nb)%NNPhys_graupel(:,:)
+!    enddo
+
+!    idx = idx + 1
+!    ExtDiag(idx)%axes = 3
+!    ExtDiag(idx)%name = 'cldamt'
+!    ExtDiag(idx)%desc = 'non-prognostic cloud amount'
+!    ExtDiag(idx)%unit = '-'
+!    ExtDiag(idx)%mod_name = 'gfs_phys'
+!    !     ExtDiag(idx)%intpl_method = 'bilinear'
+!    allocate (ExtDiag(idx)%data(nblks))
+!    do nb = 1,nblks
+!       ExtDiag(idx)%data(nb)%var3 => Statein(nb)%qgrs(:,:,Model%ntclamt) !IntDiag(nb)%NNPhys_cldamt(:,:)
+!    enddo
+
+    idx = idx + 1
+    ExtDiag(idx)%axes = 3
+    ExtDiag(idx)%name = 'o3mr'
+    ExtDiag(idx)%desc = 'ozone mixing ratio'
+    ExtDiag(idx)%unit = 'kg/kg'
+    ExtDiag(idx)%mod_name = 'gfs_phys'
+    !     ExtDiag(idx)%intpl_method = 'bilinear'
+    allocate (ExtDiag(idx)%data(nblks))
+    do nb = 1,nblks
+       ExtDiag(idx)%data(nb)%var3 => Statein(nb)%qgrs(:,:,Model%ntoz) ! IntDiag(nb)%NNPhys_o3mr(:,:)
+    enddo
+
+
+    idx = idx + 1
+    ExtDiag(idx)%axes = 3
+    ExtDiag(idx)%name = 'gu0'
+    ExtDiag(idx)%desc = 'updated u component of layer wind'
+    ExtDiag(idx)%unit = 'm/s'
+    ExtDiag(idx)%mod_name = 'gfs_phys'
+    !     ExtDiag(idx)%intpl_method = 'bilinear'
+    allocate (ExtDiag(idx)%data(nblks))
+    do nb = 1,nblks
+       ExtDiag(idx)%data(nb)%var3 => Stateout(nb)%gu0(:,:) !IntDiag(nb)%NNPhys_gu0(:,:)
+    enddo
+
+    idx = idx + 1
+    ExtDiag(idx)%axes = 3
+    ExtDiag(idx)%name = 'gv0'
+    ExtDiag(idx)%desc = 'updated v component of layer wind'
+    ExtDiag(idx)%unit = 'm/s'
+    ExtDiag(idx)%mod_name = 'gfs_phys'
+    !     ExtDiag(idx)%intpl_method = 'bilinear'
+    allocate (ExtDiag(idx)%data(nblks))
+    do nb = 1,nblks
+       ExtDiag(idx)%data(nb)%var3 => Stateout(nb)%gv0(:,:) !IntDiag(nb)%NNPhys_gv0(:,:)
+    enddo
+
+    idx = idx + 1
+    ExtDiag(idx)%axes = 3
+    ExtDiag(idx)%name = 'gt0'
+    ExtDiag(idx)%desc = 'updated layer temeprature'
+    ExtDiag(idx)%unit = 'K'
+    ExtDiag(idx)%mod_name = 'gfs_phys'
+    !     ExtDiag(idx)%intpl_method = 'bilinear'
+    allocate (ExtDiag(idx)%data(nblks))
+    do nb = 1,nblks
+       ExtDiag(idx)%data(nb)%var3 => Stateout(nb)%gt0(:,:) !IntDiag(nb)%NNPhys_gt0(:,:)
+    enddo
+
+
+    idx = idx + 1
+    ExtDiag(idx)%axes = 3
+    ExtDiag(idx)%name = 'usphum'
+    ExtDiag(idx)%desc = 'updated specific humidity'
+    ExtDiag(idx)%unit = 'kg/kg'
+    ExtDiag(idx)%mod_name = 'gfs_phys'
+    !     ExtDiag(idx)%intpl_method = 'bilinear'
+    allocate (ExtDiag(idx)%data(nblks))
+    do nb = 1,nblks
+       ExtDiag(idx)%data(nb)%var3 => Stateout(nb)%gq0(:,:,1) !IntDiag(nb)%NNPhys_usphum(:,:)
+    enddo
+
+    idx = idx + 1
+    ExtDiag(idx)%axes = 3
+    ExtDiag(idx)%name = 'uliq_wat'
+    ExtDiag(idx)%desc = 'updated cloud water mixing ratio'
+    ExtDiag(idx)%unit = 'kg/kg'
+    ExtDiag(idx)%mod_name = 'gfs_phys'
+    !     ExtDiag(idx)%intpl_method = 'bilinear'
+    allocate (ExtDiag(idx)%data(nblks))
+    do nb = 1,nblks
+       ExtDiag(idx)%data(nb)%var3 => Stateout(nb)%gq0(:,:,Model%ntcw) !IntDiag(nb)%NNPhys_uliqwat(:,:)
+    enddo
+
+!    idx = idx + 1
+!    ExtDiag(idx)%axes = 3
+!    ExtDiag(idx)%name = 'urainwat'
+!    ExtDiag(idx)%desc = 'updated rain mixing ratio'
+!    ExtDiag(idx)%unit = 'kg/kg'
+!    ExtDiag(idx)%mod_name = 'gfs_phys'
+!    !     ExtDiag(idx)%intpl_method = 'bilinear'
+!    allocate (ExtDiag(idx)%data(nblks))
+!    do nb = 1,nblks
+!       ExtDiag(idx)%data(nb)%var3 => Stateout(nb)%gq0(:,:,Model%ntrw) ! IntDiag(nb)%NNPhys_urainwat(:,:)
+!    enddo
+
+
+!    idx = idx + 1
+!    ExtDiag(idx)%axes = 3
+!    ExtDiag(idx)%name = 'uice_wat'
+!    ExtDiag(idx)%desc = 'updated ice mixing ratio'
+!    ExtDiag(idx)%unit = 'kg/kg'
+!    ExtDiag(idx)%mod_name = 'gfs_phys'
+!    !     ExtDiag(idx)%intpl_method = 'bilinear'
+!    allocate (ExtDiag(idx)%data(nblks))
+!    do nb = 1,nblks
+!       ExtDiag(idx)%data(nb)%var3 => Stateout(nb)%gq0(:,:,Model%ntiw) !IntDiag(nb)%NNPhys_uicewat(:,:)
+!    enddo
+
+!    idx = idx + 1
+!    ExtDiag(idx)%axes = 3
+!    ExtDiag(idx)%name = 'usnowwat'
+!    ExtDiag(idx)%desc = 'updated snow mixing ratio'
+!    ExtDiag(idx)%unit = 'kg/kg'
+!    ExtDiag(idx)%mod_name = 'gfs_phys'
+!    !     ExtDiag(idx)%intpl_method = 'bilinear'
+!    allocate (ExtDiag(idx)%data(nblks))
+!    do nb = 1,nblks
+!       ExtDiag(idx)%data(nb)%var3 => Stateout(nb)%gq0(:,:,Model%ntsw) ! IntDiag(nb)%NNPhys_usnowwat(:,:)
+!    enddo
+
+!    idx = idx + 1
+!    ExtDiag(idx)%axes = 3
+!    ExtDiag(idx)%name = 'ugraupel'
+!    ExtDiag(idx)%desc = 'updated snow mixing ratio'
+!    ExtDiag(idx)%unit = 'kg/kg'
+!    ExtDiag(idx)%mod_name = 'gfs_phys'
+!    !     ExtDiag(idx)%intpl_method = 'bilinear'
+!    allocate (ExtDiag(idx)%data(nblks))
+!    do nb = 1,nblks
+!       ExtDiag(idx)%data(nb)%var3 => Stateout(nb)%gq0(:,:,Model%ntgl) !IntDiag(nb)%NNPhys_ugraupel(:,:)
+!    enddo
+
+!    idx = idx + 1
+!    ExtDiag(idx)%axes = 3
+!    ExtDiag(idx)%name = 'ucldamt'
+!    ExtDiag(idx)%desc = 'updated non-prognostic cloud amount'
+!    ExtDiag(idx)%unit = '-'
+!    ExtDiag(idx)%mod_name = 'gfs_phys'
+!    !     ExtDiag(idx)%intpl_method = 'bilinear'
+!    allocate (ExtDiag(idx)%data(nblks))
+!    do nb = 1,nblks
+!       ExtDiag(idx)%data(nb)%var3 => Stateout(nb)%gq0(:,:,Model%ntclamt) !IntDiag(nb)%NNPhys_ucldamt(:,:)
+!    enddo
+
+    idx = idx + 1
+    ExtDiag(idx)%axes = 3
+    ExtDiag(idx)%name = 'uo3mr'
+    ExtDiag(idx)%desc = 'updated ozone mixing ratio'
+    ExtDiag(idx)%unit = 'kg/kg'
+    ExtDiag(idx)%mod_name = 'gfs_phys'
+    !     ExtDiag(idx)%intpl_method = 'bilinear'
+    allocate (ExtDiag(idx)%data(nblks))
+    do nb = 1,nblks
+       ExtDiag(idx)%data(nb)%var3 => Stateout(nb)%gq0(:,:,Model%ntoz) ! IntDiag(nb)%NNPhys_uo3mr(:,:)
+    enddo
+
+    idx = idx + 1
     ExtDiag(idx)%axes = 2
     ExtDiag(idx)%name = 'ca_out'
     ExtDiag(idx)%desc = 'Cellular Automata'
