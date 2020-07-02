@@ -21,7 +21,7 @@
                  
         implicit none 
 
-
+ 
 
         private
  
@@ -35,18 +35,18 @@
 ! Files containing NN weights and biases
 
         character(*), parameter::nn_file_name(nn_num_of_members)= (/& 
-!             '/scratch1/NCEPDEV/global/Alexei.A.Belochitski/data/Fphys-523-250-320-20.asc', &
-!             '/scratch1/NCEPDEV/global/Alexei.A.Belochitski/data/Fphys-523-250-320-21.asc', & 
-!             '/scratch1/NCEPDEV/global/Alexei.A.Belochitski/data/Fphys-523-250-320-22.asc', &
-!             '/scratch1/NCEPDEV/global/Alexei.A.Belochitski/data/Fphys-523-250-320-23.asc', & 
-!             '/scratch1/NCEPDEV/global/Alexei.A.Belochitski/data/Fphys-523-250-320-24.asc', &
-!             '/scratch1/NCEPDEV/global/Alexei.A.Belochitski/data/Fphys-523-250-320-25.asc', &
-!             '/scratch1/NCEPDEV/global/Alexei.A.Belochitski/data/Fphys-523-250-320-26.asc', &
-!             '/scratch1/NCEPDEV/global/Alexei.A.Belochitski/data/Fphys-523-250-320-27.asc', & 
-!             '/scratch1/NCEPDEV/global/Alexei.A.Belochitski/data/Fphys-523-250-320-28.asc', & 
-!             '/scratch1/NCEPDEV/global/Alexei.A.Belochitski/data/Fphys-523-250-320-29.asc', & 
-!             '/scratch1/NCEPDEV/global/Alexei.A.Belochitski/data/Fphys-523-250-320-30.asc', &
-             '/scratch1/NCEPDEV/global/Alexei.A.Belochitski/data/Fphys-523-250-320-31.asc' /)
+!             '/work/noaa/global/abelochi/data/Fphys-523-250-320-20.asc', &
+!             '/work/noaa/global/abelochi/data/Fphys-523-250-320-21.asc', & 
+!             '/work/noaa/global/abelochi/data/Fphys-523-250-320-22.asc', &
+!             '/work/noaa/global/abelochi/data/Fphys-523-250-320-23.asc', & 
+!             '/work/noaa/global/abelochi/data/Fphys-523-250-320-24.asc', &
+!             '/work/noaa/global/abelochi/data/Fphys-523-250-320-25.asc', &
+!             '/work/noaa/global/abelochi/data/Fphys-523-250-320-26.asc', &
+!             '/work/noaa/global/abelochi/data/Fphys-523-250-320-27.asc', & 
+!             '/work/noaa/global/abelochi/data/Fphys-523-250-320-28.asc', & 
+!             '/work/noaa/global/abelochi/data/Fphys-523-250-320-29.asc', & 
+!             '/work/noaa/global/abelochi/data/Fphys-523-250-320-30.asc', &
+             '/work/noaa/global/abelochi/data/Fphys-523-250-320-31.asc' /)
 
  ! Internal types and variables
 

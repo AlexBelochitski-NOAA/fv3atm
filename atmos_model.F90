@@ -168,6 +168,7 @@ public addLsmask2grid
 
 integer :: fv3Clock, getClock, updClock, setupClock, radClock, physClock
 integer :: nnphysClock, updnnphysClock
+logical :: nn_is_on        = .true.
 
 !-----------------------------------------------------------------------
 integer :: blocksize    = 1
@@ -345,7 +346,7 @@ subroutine update_atmos_radiation_physics (Atmos)
 !      if(IPD_Control%do_full_phys_nn) then
 !      if (debug) write(6,*) "Calling NN"
 
-if (.false.) then
+if (nn_is_on) then
       call mpp_clock_begin(nnphysClock)
 
        do nb = 1,Atm_block%nblks
@@ -487,11 +488,10 @@ endif
     endif
 
 
-if (.false.) then 
+if (nn_is_on) then 
    call mpp_clock_begin(updnnphysClock)
     IPD_Data(:)%Stateout = Stateout_tmp
    call mpp_clock_end(updnnphysClock)
-endif
 !       do nb = 1,Atm_block%nblks
 !          do i = 1, Atm_block%blksz(nb)
 !      
@@ -506,7 +506,7 @@ endif
 !
 !          enddo
 !       enddo
-
+endif
 
 #ifdef CCPP
     ! Update flag for first time step of time integration

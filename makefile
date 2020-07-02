@@ -17,7 +17,8 @@ else
   PHYSP  = gfs
 endif
 
-FFLAGS   += -I$(FMS_DIR) -I$(PHYSP)physics -Iipd -Icpl -Iio -Iatmos_cubed_sphere -Iccpp/driver -I../stochastic_physics
+#FFLAGS   += -I$(FMS_DIR) -I$(PHYSP)physics -Iipd -Icpl -Iio -Iatmos_cubed_sphere -Iccpp/driver -I../stochastic_physics
+FFLAGS   += -I$(FMS_DIR) -I$(PHYSP)physics -Iipd -Icpl -Iio -Iatmos_cubed_sphere -Iccpp/driver -I`dirname $(COMP_SRCDIR)`/stochastic_physics
 CPPDEFS  += -DESMF_VERSION_MAJOR=$(ESMF_VERSION_MAJOR)
 
 # Flag to CCPP build for 32bit dynamics
@@ -45,9 +46,12 @@ libs:
 	$(MAKE) -C ipd                 $(MAKE_OPTS) FMS_DIR=$(FMS_DIR) 32BIT=N  # force gfs physics to 64bit
 	$(MAKE) -C io                  $(MAKE_OPTS) FMS_DIR=$(FMS_DIR)
 	$(MAKE) -C atmos_cubed_sphere  $(MAKE_OPTS) FMS_DIR=$(FMS_DIR)
-	$(MAKE) -C ../stochastic_physics  $(MAKE_OPTS) FMS_DIR=$(FMS_DIR) 32BIT=N  # force gfs physics to 64bit
+#	$(MAKE) -C ../stochastic_physics  $(MAKE_OPTS) FMS_DIR=$(FMS_DIR) 32BIT=N  # force gfs physics to 64bit
+	$(MAKE) -C `dirname $(COMP_SRCDIR)`/stochastic_physics  $(MAKE_OPTS) FMS_DIR=$(FMS_DIR) 32BIT=N  # force gfs physics to 64bit
 
-$(FV3_EXE): atmos_model.o coupler_main.o ccpp/driver/libccppdriver.a atmos_cubed_sphere/libfv3core.a io/libfv3io.a ipd/libipd.a $(PHYSP)physics/lib$(PHYSP)phys.a ../stochastic_physics/libstochastic_physics.a cpl/libfv3cpl.a
+
+#$(FV3_EXE): atmos_model.o coupler_main.o ccpp/driver/libccppdriver.a atmos_cubed_sphere/libfv3core.a io/libfv3io.a ipd/libipd.a $(PHYSP)physics/lib$(PHYSP)phys.a ../stochastic_physics/libstochastic_physics.a cpl/libfv3cpl.a
+$(FV3_EXE): atmos_model.o coupler_main.o ccpp/driver/libccppdriver.a atmos_cubed_sphere/libfv3core.a io/libfv3io.a ipd/libipd.a $(PHYSP)physics/lib$(PHYSP)phys.a `dirname $(COMP_SRCD)`/stochastic_physics/libstochastic_physics.a cpl/libfv3cpl.a
 	$(LD) -o $@ $^ $(NCEPLIBS) $(LDFLAGS)
 
 else
@@ -57,9 +61,11 @@ libs:
 	$(MAKE) -C ipd                 $(MAKE_OPTS) FMS_DIR=$(FMS_DIR) 32BIT=N  # force gfs physics to 64bit
 	$(MAKE) -C io                  $(MAKE_OPTS) FMS_DIR=$(FMS_DIR)
 	$(MAKE) -C atmos_cubed_sphere  $(MAKE_OPTS) FMS_DIR=$(FMS_DIR)
-	$(MAKE) -C ../stochastic_physics  $(MAKE_OPTS) FMS_DIR=$(FMS_DIR) 32BIT=N  # force gfs physics to 64bit
+#	$(MAKE) -C ../stochastic_physics  $(MAKE_OPTS) FMS_DIR=$(FMS_DIR) 32BIT=N  # force gfs physics to 64bit
+	$(MAKE) -C `dirname $(COMP_SRCDIR)`/stochastic_physics  $(MAKE_OPTS) FMS_DIR=$(FMS_DIR) 32BIT=N  # force gfs physics to 64bit
 
-$(FV3_EXE): atmos_model.o coupler_main.o atmos_cubed_sphere/libfv3core.a io/libfv3io.a ipd/libipd.a $(PHYSP)physics/lib$(PHYSP)phys.a ../stochastic_physics/libstochastic_physics.a cpl/libfv3cpl.a
+#$(FV3_EXE): atmos_model.o coupler_main.o atmos_cubed_sphere/libfv3core.a io/libfv3io.a ipd/libipd.a $(PHYSP)physics/lib$(PHYSP)phys.a ../stochastic_physics/libstochastic_physics.a cpl/libfv3cpl.a
+$(FV3_EXE): atmos_model.o coupler_main.o atmos_cubed_sphere/libfv3core.a io/libfv3io.a ipd/libipd.a $(PHYSP)physics/lib$(PHYSP)phys.a `dirname $(COMP_SRCD)`/stochastic_physics/libstochastic_physics.a cpl/libfv3cpl.a
 	$(LD) -o $@ $^ $(NCEPLIBS) $(LDFLAGS)
 endif
 
@@ -92,7 +98,8 @@ endif
 ifneq (,$(findstring CCPP,$(CPPDEFS)))
 esmf_make_fragment:
 	@rm -rf nems_dir; mkdir nems_dir
-	@cp $(FV3CAP_LIB) ccpp/driver/libccppdriver.a atmos_cubed_sphere/libfv3core.a io/libfv3io.a ipd/libipd.a $(PHYSP)physics/lib$(PHYSP)phys.a cpl/libfv3cpl.a ../stochastic_physics/libstochastic_physics.a nems_dir
+#	@cp $(FV3CAP_LIB) ccpp/driver/libccppdriver.a atmos_cubed_sphere/libfv3core.a io/libfv3io.a ipd/libipd.a $(PHYSP)physics/lib$(PHYSP)phys.a cpl/libfv3cpl.a ../stochastic_physics/libstochastic_physics.a nems_dir
+	@cp $(FV3CAP_LIB) ccpp/driver/libccppdriver.a atmos_cubed_sphere/libfv3core.a io/libfv3io.a ipd/libipd.a $(PHYSP)physics/lib$(PHYSP)phys.a cpl/libfv3cpl.a `dirname $(COMP_SRCDIR)`/stochastic_physics/libstochastic_physics.a nems_dir
 	@cp fv3gfs_cap_mod.mod nems_dir
 	@echo "# ESMF self-describing build dependency makefile fragment" > fv3.mk
 	@echo "# src location $(PWD)" >> fv3.mk
@@ -111,7 +118,8 @@ esmf_make_fragment:
 else
 esmf_make_fragment:
 	@rm -rf nems_dir; mkdir nems_dir
-	@cp $(FV3CAP_LIB) atmos_cubed_sphere/libfv3core.a io/libfv3io.a ipd/libipd.a $(PHYSP)physics/lib$(PHYSP)phys.a cpl/libfv3cpl.a ../stochastic_physics/libstochastic_physics.a nems_dir
+#	@cp $(FV3CAP_LIB) atmos_cubed_sphere/libfv3core.a io/libfv3io.a ipd/libipd.a $(PHYSP)physics/lib$(PHYSP)phys.a cpl/libfv3cpl.a ../stochastic_physics/libstochastic_physics.a nems_dir
+	@cp $(FV3CAP_LIB) atmos_cubed_sphere/libfv3core.a io/libfv3io.a ipd/libipd.a $(PHYSP)physics/lib$(PHYSP)phys.a cpl/libfv3cpl.a `dirname $(COMP_SRCDIR)`/stochastic_physics/libstochastic_physics.a nems_dir
 	@cp fv3gfs_cap_mod.mod nems_dir
 	@echo "# ESMF self-describing build dependency makefile fragment" > fv3.mk
 	@echo "# src location $(PWD)" >> fv3.mk
