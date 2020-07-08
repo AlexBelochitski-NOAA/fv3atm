@@ -254,6 +254,10 @@
 
           allocate(x3(nout)) 
 
+
+
+!!$OMP PARALLEL default (shared) private  (member, x2)
+!!ab$OMP DO
           do member = 1,num_of_members
   
              allocate(x2(nhid(member))) 
@@ -263,15 +267,37 @@
              forall(i = 1:nhid(member)) x2(i)= tanh(sum(X*w1(member)%a(:,i))+  & 
                                                b1(member)%a(i))
 
+!!$OMP PARALLEL default (shared) private (i)
+!!$OMP DO
+!             do i = 1,nhid(member) 
+!
+!                x2(i)= tanh(sum(X*w1(member)%a(:,i)) + b1(member)%a(i))
+!
+!             enddo
+!!$OMP END DO
+!!$OMP END PARALLEL 
+
 ! Calculate NN output 
 
              forall(i=1:nout) x3(i)= sum(w2(member)%a(:,i)*x2) + b2(member)%a(i)
+
+!!$OMP PARALLEL default (shared) private (i)
+!!$OMP DO
+!             do i=1,nout 
+!                
+!                x3(i)= sum(w2(member)%a(:,i)*x2) + b2(member)%a(i)
+!
+!             enddo
+!!$OMP END DO
+!!$OMP END PARALLEL 
 
              Y = Y + x3 
              
              deallocate(x2)
          
           end do                    ! member
+!!$OMP END DO
+!!$OMP END PARALLEL 
 
           deallocate(x3)
       
