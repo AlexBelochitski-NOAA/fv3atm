@@ -466,7 +466,10 @@ module module_physics_driver
                  ntoz, ntcw, ntiw, ncld,ntke,ntkev, ntlnc, ntinc, lsoil,&
                  ntrw, ntsw, ntrnc, ntsnc, ntot3d, ntgl, ntgnc, ntclamt,&
                  ims, ime, kms, kme, its, ite, kts, kte, imp_physics,   &
-                 ntwa, ntia, nmtvr
+                 ntwa, ntia, nmtvr,                                     &
+! SHOC's prognostic variances
+                 nthlsec, nqtsec
+
 
       integer :: i, kk, ic, itc, k, n, k1, iter, levshcm, tracers,      &
                  tottracer, nsamftrac, num2, num3, nshocm, nshoc, ntk,  &
@@ -582,7 +585,13 @@ module module_physics_driver
       real(kind=kind_phys), allocatable ::                              &
            clw(:,:,:), qrn(:,:),  qsnw(:,:), ncpl(:,:), ncpi(:,:),      &
            ncpr(:,:),  ncps(:,:), cnvc(:,:), cnvw(:,:),                 &
-           qgl(:,:),   ncgl(:,:)
+           qgl(:,:),   ncgl(:,:),                                       &
+! SHOC hooks to the diffusion solver
+           dtabsdt(:,:), dqwvdt(:,:),                                   &
+           dqcidt(:,:), dqcldt(:,:), dqpidt(:,:), dqpldt(:,:),          &
+           xkzo(:,:), xkzmo(:,:)
+
+
 !--- for 2 M microphysics
 !     real(kind=kind_phys), allocatable, dimension(:) ::                &
 !            cn_prc, cn_snr
@@ -727,6 +736,9 @@ module module_physics_driver
       ntiw    = Model%ntiw
       ncld    = Model%ncld
       ntke    = Model%ntke
+! SHOC's prognostic variances
+      nthlsec = Model%nthlsec
+      nqtsec  = Model%nqtsec
 !
       ntlnc   = Model%ntlnc
       ntinc   = Model%ntinc
@@ -944,14 +956,28 @@ module module_physics_driver
 !
 !## CCPP ##* GFS_typedefs.F90/interstitial_create
       if (Model%do_shoc) then
+
         allocate (qrn(im,levs),   qsnw(im,levs), &
                   ncpl(im,levs),  ncpi(im,levs))
+        allocate (dtabsdt(im,levs), dqwvdt(im,levs), dqcidt(im,levs), dqcldt(im,levs), dqpidt(im,levs), dqpldt(im,levs))
+        allocate (xkzo(im,levs-1), xkzmo(im,levs-1))
+
         do k=1,levs
           do i=1,im
             ncpl(i,k) = zero
             ncpi(i,k) = zero
             qrn(i,k)  = zero
             qsnw(i,k) = zero
+            dqwvdt(i,k) = zero
+            dqcidt(i,k) = zero
+            dqcldt(i,k) = zero
+            dqpidt(i,k) = zero
+            dqpldt(i,k) = zero
+            if (k<levs) then
+               xkzo(i,k)   = zero
+               xkzmo(i,k)  = zero
+            endif
+
           enddo
         enddo
       endif
@@ -2819,6 +2845,77 @@ module module_physics_driver
       endif
 !*## CCPP ##
 
+! Save water vapor, condensate, and temperature tendencies due to diffusion for later use in SHOC                  
+
+     if (Model%do_shoc) then
+
+        do k=1,levs
+           do i=1,im
+! Temperature tendency due to diffusion                                                                             
+              if (Model%lsidea) then
+                 dtabsdt(i,k) = dtdt(i,k)
+              else
+! Substract tendnecies due to radiation if it's active                                                               
+                 dtabsdt(i,k) = dtdt(i,k) - (Radtend%htrlw(i,k)+Radtend%htrsw(i,k)*xmu(i))
+              endif
+! Water vapor tendency due to diffusion                                                                               
+              dqwvdt(i,k)  = dqdt(i,k,1)
+           enddo
+        enddo
+
+        if (imp_physics == 10) then   ! Morrison-Gettelman                                                                  
+!          do k=1,levs                                                                                                      
+!            do i=1,im                                                                                                      
+!              clw(i,k,1) = Stateout%gq0(i,k,ntiw)                    ! ice                                                 
+!              clw(i,k,2) = Stateout%gq0(i,k,ntcw)                    ! water                                               
+!              ncpl(i,k)  = Stateout%gq0(i,k,ntlnc)                                                                         
+!              ncpi(i,k)  = Stateout%gq0(i,k,ntinc)                                                                         
+!            enddo                                                                                                          
+!          enddo                                                                                                            
+!          if (abs(Model%fprcp) == 1 .or. mg3_as_mg2) then                                                                  
+!            do k=1,levs                                                                                                    
+!              do i=1,im                                                                                                    
+!                qrn(i,k)  = Stateout%gq0(i,k,ntrw)                                                                         
+!                qsnw(i,k) = Stateout%gq0(i,k,ntsw)                                                                         
+!              enddo                                                                                                        
+!            enddo                                                                                                          
+!          elseif (Model%fprcp > 1) then                                                                                    
+!            do k=1,levs                                                                                                    
+!              do i=1,im                                                                                                    
+!                qrn(i,k)  = Stateout%gq0(i,k,ntrw)                                                                         
+!                qsnw(i,k) = Stateout%gq0(i,k,ntsw) + Stateout%gq0(i,k,ntgl)                                                
+!              enddo                                                                                                        
+!            enddo                                                                                                          
+!        endif                                                                                                              
+      elseif (imp_physics == 11) then  ! GFDL MP - needs modify for condensation                                            
+!          do k=1,levs                                                                                                      
+!            do i=1,im                                                                                                      
+!              clw(i,k,1) = Stateout%gq0(i,k,ntiw)                    ! ice                                                 
+!              clw(i,k,2) = Stateout%gq0(i,k,ntcw)                    ! water                                               
+!              qrn(i,k)   = Stateout%gq0(i,k,ntrw)                                                                          
+!              qsnw(i,k)  = Stateout%gq0(i,k,ntsw)                                                                          
+!            enddo                                                                                                          
+!          enddo                                                                                                            
+      elseif (imp_physics == 99 .or. imp_physics == 98) then ! Zhao-Carr                                            
+         do k=1,levs
+            do i=1,im
+!              if (abs(Stateout%gq0(i,k,ntcw)) < epsq) then                                                       
+!                Stateout%gq0(i,k,ntcw) = 0.0                                                                          
+!              endif                                                                                               
+
+               tem =  max(0.0, MIN(1.0, (TCR-Stateout%gt0(i,k))*TCRF))
+               dqcidt(i,k)  = dqdt(i,k,2)*tem        ! Cloud ice                                                    
+               dqcldt(i,k)  = dqdt(i,k,2)*(1-tem)    ! Cloud water                                                    
+               dqpidt(i,k)  = 0.0
+               dqpldt(i,k)  = 0.0
+
+            enddo
+         enddo
+      endif
+
+   endif  ! if (Model%do_shoc)   
+
+
 !## CCPP ##* GFS_PBL_generic.F90/GFS_PBL_generic_post_run
       if (Model%cplchm) then
         do i = 1, im
@@ -3388,6 +3485,11 @@ module module_physics_driver
               otspt(tracers+1,1) = .false.
               ntk = tracers
             endif
+! Don't transport SHOC's prognostic variances
+            if (nqtsec  == n ) otspt(tracers+1,1) = .false.
+            if (nthlsec == n ) otspt(tracers+1,1) = .false.
+
+
             if (ntlnc == n .or. ntinc == n .or. ntrnc == n .or. ntsnc == n .or. ntgnc == n)    &
 !           if (ntlnc == n .or. ntinc == n .or. ntrnc == n .or. ntsnc == n .or.&
 !               ntrw  == n .or. ntsw  == n .or. ntgl  == n)                    &
@@ -3611,7 +3713,15 @@ module module_physics_driver
                      Model%shoc_parm(5), Tbd%phy_f3d(1,1,ntot3d-2),           &
                      clw(1,1,ntk), hflxq, evapq, prnum,                       &
                      Tbd%phy_f3d(1,1,ntot3d-1), Tbd%phy_f3d(1,1,ntot3d),      &
-                     lprnt, ipr, imp_physics, ncpl, ncpi)
+!                     lprnt, ipr, imp_physics, ncpl, ncpi)
+                     lprnt, ipr, imp_physics, ncpl, ncpi,                     &
+                     clw(1,1,Model%nqtsec),clw(1,1,Model%nthlsec),            &
+                     Tbd%phy_f3d(1,1,ntot3d-3),Tbd%phy_f3d(1,1,ntot3d-4),     &
+!                     Tbd%phy_f3d(1,1,ntot3d-5),Tbd%phy_f3d(1,1,ntot3d-6), 2)  
+                     Tbd%phy_f3d(1,1,ntot3d-5),Tbd%phy_f3d(1,1,ntot3d-6),     &
+!                     Tbd%phy_f3d(1,1,ntot3d-7), xkzo, xkzmo, Model%shoc_parm(6), & 
+                     Tbd%phy_f3d(1,1,ntot3d-7), xkzo, xkzmo, 2, &
+                     Model%shoc_diag, Diag)
 
 
 !       enddo
@@ -3843,7 +3953,11 @@ module module_physics_driver
                            lprnt, ipr, kcnv, QLCN, QICN,                    &
                            w_upi, cf_upi, CNV_MFD,           CNV_DQLDT,     &
 !                          w_upi, cf_upi, CNV_MFD, CNV_PRC3, CNV_DQLDT,     &
-                           CLCN, CNV_FICE, CNV_NDROP, CNV_NICE, imp_physics)
+!                           CLCN, CNV_FICE, CNV_NDROP, CNV_NICE, imp_physics)
+                           CLCN, CNV_FICE, CNV_NDROP, CNV_NICE, imp_physics,&
+! SHOC coupling
+                           Tbd%phy_f3d(:,:,ntot3d-5),Tbd%phy_f3d(:,:,ntot3d-6))
+
 !*## CCPP ##
 !           if (lprnt) write(0,*)'aftcsgt0=',Stateout%gt0(ipr,:)
 !           if (lprnt) write(0,*)'aftcstke=',clw(ipr,1:25,ntk)
@@ -4484,7 +4598,16 @@ module module_physics_driver
                    Model%shoc_parm(5), Tbd%phy_f3d(1,1,ntot3d-2),             &
                    clw(1,1,ntk), hflxq, evapq, prnum,                         &
                    Tbd%phy_f3d(1,1,ntot3d-1), Tbd%phy_f3d(1,1,ntot3d),        &
-                   lprnt, ipr, imp_physics, ncpl, ncpi)
+!                   lprnt, ipr, imp_physics, ncpl, ncpi)
+                   lprnt, ipr, imp_physics, ncpl, ncpi,                       &
+                   clw(1,1,Model%nqtsec),clw(1,1,Model%nthlsec),              &
+                   Tbd%phy_f3d(1,1,ntot3d-3),Tbd%phy_f3d(1,1,ntot3d-4),       &
+!                     Tbd%phy_f3d(1,1,ntot3d-5),Tbd%phy_f3d(1,1,ntot3d-6), 2)
+                     Tbd%phy_f3d(1,1,ntot3d-5),Tbd%phy_f3d(1,1,ntot3d-6),     &
+!                     Tbd%phy_f3d(1,1,ntot3d-7), xkzo, xkzmo, Model%shoc_parm(6), & 
+                     Tbd%phy_f3d(1,1,ntot3d-7), xkzo, xkzmo, 2, &
+                     Model%shoc_diag, Diag)
+
 !       enddo
 
         if (imp_physics == Model%imp_physics_mg) then

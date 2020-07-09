@@ -145,7 +145,9 @@ module cs_conv
 ! for coupling to MG microphysics
                        QLCN, QICN, w_upi, cf_upi, CNV_MFD,               &
 !                      QLCN, QICN, w_upi, cf_upi, CNV_MFD, CNV_PRC3,     &
-                       CNV_DQLDT,CLCN,CNV_FICE,CNV_NDROP,CNV_NICE,mp_phys)
+                       CNV_DQLDT,CLCN,CNV_FICE,CNV_NDROP,CNV_NICE,mp_phys, &
+! SHOC coupling                                                 
+                       GTQDET, GTHDET                                    )
 
 !---------------------------------------------------------------------------------
 ! Purpose:
@@ -198,6 +200,11 @@ module cs_conv
                                                     cnv_dqldt, clcn, cnv_fice,          &
                                                     cnv_ndrop, cnv_nice, cf_upi
   integer, intent(inout) :: kcnv(im)              ! zero if no deep convection and 1 otherwise
+
+! SHOC coupling
+  REAL, intent(inout),  dimension(ijsdim,kmax) ::  GTQDET ! total water variance tendency by detrainment 
+  REAL, intent(inout),  dimension(ijsdim,kmax) ::  GTHDET ! MSE variance tendency by detrainment 
+
 
 !DDsigma - output added for AW sigma diagnostics
 !  interface sigma and vertical velocity by cloud type (1=sfc) 
@@ -375,7 +382,9 @@ module cs_conv
                    DELTA , DELTI , ISTS  , IENS, mype,& ! input
                    fscav,  fswtr,  wcbmaxm, nctp,     &
                    sigma,  vverti,                    & ! input/output !DDsigma
-                   do_aw, do_awdd, flx_form)
+                   do_aw, do_awdd, flx_form,          &
+! SHOC coupling
+                   GTQDET, GTHDET                     ) ! output 
 !
 !
 !DD detrainment has to be added in for GFS
@@ -556,7 +565,9 @@ module cs_conv
                          DELTA , DELTI , ISTS  , IENS, mype,& ! input
                          fscav,  fswtr,  wcbmaxm, nctp,     & !
                          sigma,  vverti,                    & ! input/output !DDsigma
-                         do_aw, do_awdd, flx_form )
+                         do_aw, do_awdd, flx_form,          &
+! SHOC coupling
+                         GTQDET, GTHDET                     ) ! output
 !
    IMPLICIT NONE
       
@@ -583,6 +594,10 @@ module cs_conv
 !
 !  [MODIFIED]
    REAL(r8), INTENT(INOUT) :: CBMFX (IM, NCTP)        !! cloud base mass flux
+
+! SHOC coupling
+   REAL(r8), intent(out) :: GTQDET( IJSDIM, KMAX ) ! total water variance tendency by detrainment 
+   REAL(r8), intent(out) :: GTHDET( IJSDIM, KMAX ) ! MSE variance tendency by detrainment 
 
 !DDsigma - output added for AW sigma diagnostics
 ! sigma and vert. velocity as a function of cloud type (1==sfc)
@@ -828,6 +843,9 @@ module cs_conv
          dqldwn(i,k)      = zero
          dqidwn(i,k)      = zero
          cmdet(i,k)       = zero
+! SHOC coupling
+         gthdet(i,k)      = zero
+         gtqdet(i,k)      = zero
        enddo
      enddo
      do n = ntrq,ntr
@@ -1259,6 +1277,24 @@ module cs_conv
                  ISTS          , IENS                               )    ! input
 
    ENDDO      ! end of cloud type ctp loop
+
+! Coupling to SHOC v2
+! Caclulate tendnencies of MSE and total water variances due to detrainment 
+   do ctp=1,nctp
+      do i=ists,iens
+         if  (cbmfx(i,ctp) >0) then
+
+            gtqdet(i,kt(i,ctp)) =   gtqdet(i,kt(i,ctp)) + cbmfx(i,ctp)*delpi(i,kt(i,ctp))*gcyt(i,ctp)* &
+                                    ((gcqt(i,ctp)+gclt(i,ctp)+gcit(i,ctp))/gcyt(i,ctp)   -             &
+                                    (gdq(i,kt(i,ctp),1)+gdq(i,kt(i,ctp),itl)+gdq(i,kt(i,ctp),iti)))**2
+
+            gthdet(i,kt(i,ctp)) =   gthdet(i,kt(i,ctp)) +  cbmfx(i,ctp)*delpi(i,kt(i,ctp))*gcyt(i,ctp)* &
+                                    ((gcht(i,ctp)/gcyt(i,ctp) - gdh(i,kt(i,ctp)))/cp)**2
+
+         end if
+      enddo
+   enddo
+
    
 !
    do k=1,kmax

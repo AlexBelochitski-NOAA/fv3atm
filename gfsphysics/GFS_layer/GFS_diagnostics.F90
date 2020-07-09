@@ -105,6 +105,8 @@ module GFS_diagnostics
     real(kind=kind_phys), parameter :: cn_th  = 1000._kind_phys
     real(kind=kind_phys), parameter :: cn_hr  = 3600._kind_phys
 
+    logical             , parameter :: shoc_time_avg = .false.
+
     NFXR = Model%NFXR
     nblks = size(Statein)
 
@@ -3224,6 +3226,489 @@ module GFS_diagnostics
       ExtDiag(idx)%data(nb)%var2 => sfcprop(nb)%qrain(:)
     enddo
 !--------------------------nsst variables
+  endif
+if (Model%shoc_diag) then
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_qt'
+     ExtDiag(idx)%desc = 'Total water mixing ratio'
+     ExtDiag(idx)%unit = 'kg/kg'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg = shoc_time_avg  !  .false. ! .TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_qt(:,:)
+     enddo
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_hl'
+     ExtDiag(idx)%desc = 'Liquid/ice static energy'
+     ExtDiag(idx)%unit = 'K'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  ! .false. ! .TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_hl(:,:)
+     enddo
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_w'
+     ExtDiag(idx)%desc = 'Vertical velocity'
+     ExtDiag(idx)%unit = 'm/s'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  ! .false. ! .TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_w(:,:)
+     enddo
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_qt_qt'
+     ExtDiag(idx)%desc = 'Second moment of total water mixing ratio'
+     ExtDiag(idx)%unit = 'kg**2/kg**2'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  !.TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_qt_qt(:,:)
+     enddo
+  idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_hl_hl'
+     ExtDiag(idx)%desc = ' Second moment of liquid/ice static energy'
+     ExtDiag(idx)%unit = 'K**2'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  !.TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_hl_hl(:,:)
+     enddo
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_w_w'
+     ExtDiag(idx)%desc = 'Second moment of vertical velocity'
+     ExtDiag(idx)%unit = 'm**2/s**2'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  !.TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_w_w(:,:)
+     enddo
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_w_qt'
+     ExtDiag(idx)%desc = 'SGS flux of tot. wat. mix.'
+     ExtDiag(idx)%unit = 'm/s*kg/kg'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  ! .TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_w_qt(:,:)
+     enddo
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_w_hl'
+     ExtDiag(idx)%desc = 'SGS flux of liquid/ice static energy'
+     ExtDiag(idx)%unit = 'K*m/s'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  !.TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_w_hl(:,:)
+     enddo
+   idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_qt_hl'
+     ExtDiag(idx)%desc = 'Covariance of tot. wat. mix. ratio and static energy'
+     ExtDiag(idx)%unit = 'K*kg/kg'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  !.TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_qt_hl(:,:)
+     enddo
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_w_w_w'
+     ExtDiag(idx)%desc = 'Third moment of vertical velocity'
+     ExtDiag(idx)%unit = 'm**3/s**3'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  ! .TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_w_w_w(:,:)
+     enddo
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_hl_hl_hl'
+     ExtDiag(idx)%desc = 'Third moment of liquid/ice static energy'
+     ExtDiag(idx)%unit = 'K**3'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  !.TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_hl_hl_hl(:,:)
+     enddo
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_qt_Sk'
+     ExtDiag(idx)%desc = 'Skewness of total water mixing ratio'
+     ExtDiag(idx)%unit = '-'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =   shoc_time_avg  ! .false. ! .TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_qt_Sk(:,:)
+     enddo
+
+  idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_hl_Sk'
+     ExtDiag(idx)%desc = 'Skewness of liquid/ice static energy'
+     ExtDiag(idx)%unit = '-'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =   shoc_time_avg  !.false. ! .TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_hl_Sk(:,:)
+     enddo
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_w_Sk'
+     ExtDiag(idx)%desc = 'Skewness of vertical velocity'
+     ExtDiag(idx)%unit = '-'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =   shoc_time_avg  !.false. !  .TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_w_Sk(:,:)
+     enddo
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_G1_weight'
+     ExtDiag(idx)%desc = 'Weight of the first Gaussian for all variables'
+     ExtDiag(idx)%unit = '-'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =   shoc_time_avg  !.false. !  .TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_G1_weight(:,:)
+     enddo
+
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_G1_w_nmean'
+     ExtDiag(idx)%desc = 'Mean of the first W Gaussian'
+     ExtDiag(idx)%unit = 'm/s'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  !.TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_G1_w_nmean(:,:)
+     enddo
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_G1_hl_nvar'
+     ExtDiag(idx)%desc = 'Standard deviation of the first HL Gaussian'
+     ExtDiag(idx)%unit = 'K'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  ! .TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_G1_hl_nvar(:,:)
+     enddo
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_G1_qt_hl_ncov'
+     ExtDiag(idx)%desc = 'Covariance of the HL and Qt Gaussian'
+     ExtDiag(idx)%unit = 'K*kg/kg'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  !.TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_G1_qt_hl_ncov(:,:)
+     enddo
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_G2_w_nmean'
+     ExtDiag(idx)%desc = 'Mean of the second W Gaussian'
+     ExtDiag(idx)%unit = 'm/s'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  ! .TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_G2_w_nmean(:,:)
+     enddo
+
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_G2_w_nvar'
+     ExtDiag(idx)%desc = 'Standard deviation of the second W Gaussian'
+     ExtDiag(idx)%unit = 'm/s'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  !.TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_G2_w_nvar(:,:)
+     enddo
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_G2_qt_nmean'
+     ExtDiag(idx)%desc = 'Mean of the second Qt Gaussian'
+     ExtDiag(idx)%unit = 'kg/kg'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  !.TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_G2_qt_nmean(:,:)
+     enddo
+
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_G2_qt_nvar'
+     ExtDiag(idx)%desc = 'Standard deviation of the second Qt Gaussian'
+     ExtDiag(idx)%unit = 'kg/kg'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  !.TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_G2_qt_nvar(:,:)
+     enddo
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_G2_hl_nmean'
+     ExtDiag(idx)%desc = 'Mean of the second HL Gaussian'
+     ExtDiag(idx)%unit = 'K'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  !.TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_G2_hl_nmean(:,:)
+     enddo
+
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_G2_hl_nvar'
+     ExtDiag(idx)%desc = 'Standard deviation of the second HL Gaussian'
+     ExtDiag(idx)%unit = 'K'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  ! .TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_G2_hl_nvar(:,:)
+     enddo
+ idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_TKE_boyancy_prod'
+     ExtDiag(idx)%desc = 'TKE boyancy production/desturction term'
+     ExtDiag(idx)%unit = 'm**2/s**3'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  !.TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_TKE_boyancy_prod(:,:)
+     enddo
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_TKE_shear_prod'
+     ExtDiag(idx)%desc = 'TKE shear production term'
+     ExtDiag(idx)%unit = 'm**2/s**3'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  !.TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_TKE_shear_prod(:,:)
+     enddo
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_TKE_dissipation'
+     ExtDiag(idx)%desc = 'TKE dissipation term '
+     ExtDiag(idx)%unit = 'm**2/s**3'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  !.TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_TKE_dissipation(:,:)
+     enddo
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_TKE_damping_coef'
+     ExtDiag(idx)%desc = 'Damping coefficient in the TKE dissipation term '
+     ExtDiag(idx)%unit = '-'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  !.TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_TKE_damping_coef(:,:)
+     enddo
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_qt_qt_detrainment_prod'
+     ExtDiag(idx)%desc = 'Qt variance Detrainment production term'
+     ExtDiag(idx)%unit = 'kg**2/kg**2/s'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  !.TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_qt_qt_detrainment_prod(:,:)
+     enddo
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_qt_qt_shear_prod'
+     ExtDiag(idx)%desc = 'Qt variance shear production term'
+     ExtDiag(idx)%unit = 'kg**2/kg**2/s'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  !.TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_qt_qt_shear_prod(:,:)
+     enddo
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_qt_qt_dissipation'
+     ExtDiag(idx)%desc = 'Qt variance dissipation term '
+     ExtDiag(idx)%unit = 'kg**2/kg**2/s'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  !.TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_qt_qt_dissipation(:,:)
+     enddo
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_hl_hl_detrainment_prod'
+     ExtDiag(idx)%desc = 'Hl variance Detrainment production term'
+     ExtDiag(idx)%unit = 'K**2/s'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  !.TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_hl_hl_detrainment_prod(:,:)
+     enddo
+
+ idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_hl_hl_shear_prod'
+     ExtDiag(idx)%desc = 'Qt variance shear production term'
+     ExtDiag(idx)%unit = 'K**2/s'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  !.TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_hl_hl_shear_prod(:,:)
+     enddo
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_hl_hl_dissipation'
+     ExtDiag(idx)%desc = 'Hl variance dissipation term '
+     ExtDiag(idx)%unit = 'K**2/s'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =  shoc_time_avg  !.TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_hl_hl_dissipation(:,:)
+     enddo
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_ret2iso_tscale'
+     ExtDiag(idx)%desc = '"Return-to-isotropy" time scale'
+     ExtDiag(idx)%unit = 's'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =   shoc_time_avg  !.false. ! .TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_ret2iso_tscale(:,:)
+     enddo
+
+     idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_tkh'
+     ExtDiag(idx)%desc = 'Eddy diffusivity for heat'
+     ExtDiag(idx)%unit = 'm**2/s'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =   shoc_time_avg  !.false. ! .TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_tkh(:,:)
+     enddo
+    idx = idx + 1
+     ExtDiag(idx)%axes = 3
+     ExtDiag(idx)%name = 'SHOC_Pr'
+     ExtDiag(idx)%desc = 'Prandtl number'
+     ExtDiag(idx)%unit = '-'
+     ExtDiag(idx)%mod_name = 'gfs_phys'
+     ExtDiag(idx)%intpl_method = 'bilinear'
+     ExtDiag(idx)%time_avg =   shoc_time_avg  !.false. !  .TRUE.
+     allocate (ExtDiag(idx)%data(nblks))
+     do nb = 1,nblks
+        ExtDiag(idx)%data(nb)%var3 => IntDiag(nb)%SHOC_Pr(:,:)
+     enddo
   endif
 
 !--------------------------aerosols

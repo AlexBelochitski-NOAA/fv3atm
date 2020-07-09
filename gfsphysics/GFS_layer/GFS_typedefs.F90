@@ -19,7 +19,7 @@ module GFS_typedefs
        use h2o_def,                  only: levh2o,      h2o_coeff
        use aerclm_def,               only: ntrcaer,     ntrcaerm
 #endif
-
+       use parse_tracers,    only: get_tracer_index, NO_TRACER
        implicit none
 
 #ifdef CCPP
@@ -705,7 +705,6 @@ module GFS_typedefs
     logical              :: mg_do_ice_gmao
     logical              :: mg_do_liq_liu
 
-    real(kind=kind_phys) :: shoc_parm(5)    !< critical pressure in Pa for tke dissipation in shoc
     integer              :: ncnd            !< number of cloud condensate types
 
     !--- Thompson's microphysical parameters
@@ -779,7 +778,9 @@ module GFS_typedefs
     logical              :: flx_form        !< AW scale-aware option in cs convection
     logical              :: do_shoc         !< flag for SHOC
     logical              :: shocaftcnv      !< flag for SHOC
-    logical              :: shoc_cld        !< flag for clouds
+    logical              :: shoc_cld        !< flag for SHOC clouds interacting with radiation
+    real(kind=kind_phys) :: shoc_parm(6)    !< critical pressure in Pa for tke dissipation in shoc
+    logical              :: shoc_diag       !< Flag for saving SHOC-related diagnostics
     logical              :: uni_cld         !< flag for clouds in grrad
 #ifdef CCPP
     logical              :: oz_phys         !< flag for old (2006) ozone physics
@@ -1005,6 +1006,8 @@ module GFS_typedefs
     integer              :: ntsnc           !< tracer index for snow   number concentration
     integer              :: ntgnc           !< tracer index for graupel number concentration
     integer              :: ntke            !< tracer index for kinetic energy
+    integer              :: nqtsec          !< tracer index variance of total water
+    integer              :: nthlsec         !< tracer index variance of moist static energy
     integer              :: nto             !< tracer index for oxygen ion
     integer              :: nto2            !< tracer index for oxygen
     integer              :: ntwa            !< tracer index for water friendly aerosol 
@@ -1482,6 +1485,76 @@ module GFS_typedefs
 
     !--- MP quantities for 3D diagnositics 
     real (kind=kind_phys), pointer :: refl_10cm(:,:) => null()  !< instantaneous refl_10cm 
+
+!--- SHOC diagnostics
+
+! Moments of the SGS PDF
+    real (kind=kind_phys), pointer :: SHOC_qt(:,:) => null() ! Total water mixing ratio, kg/kg
+    real (kind=kind_phys), pointer :: SHOC_hl(:,:) => null() ! Liquid/ice static energy, K
+    real (kind=kind_phys), pointer :: SHOC_w(:,:)  => null() ! Vertical velocity, m/s
+
+    real (kind=kind_phys), pointer :: SHOC_qt_qt(:,:) => null() ! Second moment of total water mixing ratio, kg**2/kg**2
+    real (kind=kind_phys), pointer :: SHOC_hl_hl(:,:) => null() ! Second moment of liquid/ice static energy, K**2
+    real (kind=kind_phys), pointer :: SHOC_w_w(:,:)   => null()  ! Second moment of vertical velocity, m**2/s**2
+
+    real (kind=kind_phys), pointer :: SHOC_w_qt(:,:)  => null() ! SGS flux of tot. wat. mix., kg/kg*m/s
+    real (kind=kind_phys), pointer :: SHOC_w_hl(:,:)  => null() ! SGS flux of liquid/ice static energy, K*m/s
+    real (kind=kind_phys), pointer :: SHOC_qt_hl(:,:) => null() ! Covariance of tot. wat. mix. ratio and static energy, K*kg/kg
+
+    real (kind=kind_phys), pointer :: SHOC_w_w_w(:,:) => null() ! Third moment of vertical velocity, m**3/s**3
+    real (kind=kind_phys), pointer :: SHOC_hl_hl_hl(:,:) => null() ! Third moment of liquid/ice static energy, K**3
+
+! Additional PDF properties
+    real (kind=kind_phys), pointer :: SHOC_w_Sk(:,:)  => null()  ! Skewness of vertical velocity
+    real (kind=kind_phys), pointer :: SHOC_qt_Sk(:,:) => null()  ! Skewness of total water
+    real (kind=kind_phys), pointer :: SHOC_hl_Sk(:,:) => null()  ! Skewness of iquid/ice static energy
+
+
+! Parameters of SGS PDF
+    real (kind=kind_phys), pointer :: SHOC_G1_weight(:,:) => null() ! Weight of the first Gaussian for all variables
+
+    real (kind=kind_phys), pointer :: SHOC_G1_w_nmean(:,:) => null() ! Mean of the first W Gaussian, m/s
+    real (kind=kind_phys), pointer :: SHOC_G1_w_nvar(:,:) => null()  ! Std deviation of the first W Gaussian, m/s
+    real (kind=kind_phys), pointer :: SHOC_G1_qt_nmean(:,:) => null() ! Mean of the first Qt Gaussian, kg/kg
+    real (kind=kind_phys), pointer :: SHOC_G1_qt_nvar(:,:) => null()  ! Std deviation the first Qt Gaussian, kg/kg
+    real (kind=kind_phys), pointer :: SHOC_G1_hl_nmean(:,:) => null() ! Mean of the first HL Gaussian, K
+    real (kind=kind_phys), pointer :: SHOC_G1_hl_nvar(:,:) => null()  ! Std deviation of the first HL Gaussian, K
+    real (kind=kind_phys), pointer :: SHOC_G1_qt_hl_ncov(:,:) => null() ! Covariance of the first HL and Qt Gaussians
+
+    real (kind=kind_phys), pointer :: SHOC_G2_w_nmean(:,:) => null() ! Mean of the second W Gaussian, m/s
+    real (kind=kind_phys), pointer :: SHOC_G2_w_nvar(:,:) => null()  ! Std deviation of the second W Gaussian, m/s
+    real (kind=kind_phys), pointer :: SHOC_G2_qt_nmean(:,:) => null() ! Mean of the second Qt Gaussian, kg/kg
+    real (kind=kind_phys), pointer :: SHOC_G2_qt_nvar(:,:) => null()  ! Std deviation of the second Qt Gaussian, kg/kg
+    real (kind=kind_phys), pointer :: SHOC_G2_hl_nmean(:,:) => null() ! Mean of the second HL Gaussian, K
+    real (kind=kind_phys), pointer :: SHOC_G2_hl_nvar(:,:) => null()  ! Std deviation of the second HL Gaussian, K
+!    real (kind=kind_phys), pointer :: SHOC_G2_qt_hl_ncov(:,:) => null() ! Normalized covariance of the second HL and Qt Gaussians
+
+! Eddy length formulation
+
+    real (kind=kind_phys), pointer :: SHOC_eddy_length(:,:) => null() ! Eddy length, m
+
+! TKE equation budget and TKE-derived properties
+
+    real (kind=kind_phys), pointer :: SHOC_TKE_boyancy_prod(:,:) => null() ! TKE boyancy production/desturction term
+    real (kind=kind_phys), pointer :: SHOC_TKE_shear_prod(:,:)   => null() ! TKE shear production term
+    real (kind=kind_phys), pointer :: SHOC_TKE_dissipation(:,:)  => null() ! TKE dissipation term
+    real (kind=kind_phys), pointer :: SHOC_TKE_damping_coef(:,:)  => null() ! Damping coefficient in the TKE dissipation term
+
+
+    real (kind=kind_phys), pointer :: SHOC_ret2iso_tscale(:,:)  => null() ! "Return-to-isotropy" time scale, s
+    real (kind=kind_phys), pointer :: SHOC_tkh(:,:)  => null()            !  Eddy diffusivity for heat, m**2/s
+    real (kind=kind_phys), pointer :: SHOC_Pr(:,:)  => null()             !  Prandtl number
+
+! Prognostic variances equations budget
+
+    real (kind=kind_phys), pointer :: SHOC_qt_qt_shear_prod(:,:) => null() !  Second moment of total water mixing ratio, kg**2/kg**2
+    real (kind=kind_phys), pointer :: SHOC_qt_qt_detrainment_prod(:,:) => null() !
+    real (kind=kind_phys), pointer :: SHOC_qt_qt_dissipation(:,:) => null() !
+
+    real (kind=kind_phys), pointer :: SHOC_hl_hl_shear_prod(:,:) => null() !  Second moment of total water mixing ratio, kg**2/kg**2
+    real (kind=kind_phys), pointer :: SHOC_hl_hl_detrainment_prod(:,:) => null() !
+    real (kind=kind_phys), pointer :: SHOC_hl_hl_dissipation(:,:) => null() !
+
 !
 !---vay-2018 UGWP-diagnostics daily mean
 !
@@ -2893,6 +2966,8 @@ module GFS_typedefs
     logical              :: do_shoc        = .false.                  !< flag for SHOC
     logical              :: shocaftcnv     = .false.                  !< flag for SHOC
     logical              :: shoc_cld       = .false.                  !< flag for SHOC in grrad
+    logical              :: shoc_diag      = .false.                  !< flag for saving SHOC diagnostics
+    real(kind=kind_phys) :: shoc_parm(6)   = (/7000.0,1.0,4.2857143,0.7,-999.0,2./)  !< some tunable parameters for shoc
 #ifdef CCPP
     logical              :: oz_phys        = .true.                   !< flag for old (2006) ozone physics
     logical              :: oz_phys_2015   = .false.                  !< flag for new (2015) ozone physics
@@ -2972,7 +3047,7 @@ module GFS_typedefs
     real(kind=kind_phys) :: wminras(2)     = (/1.0d-5,1.0d-5/)        !< [in] water and ice minimum threshold for ras
 
     real(kind=kind_phys) :: rbcr           = 0.25                     !< Critical Richardson Number in PBL scheme
-    real(kind=kind_phys) :: shoc_parm(5)   = (/7000.0,1.0,4.2857143,0.7,-999.0/)  !< some tunable parameters for shoc
+!    real(kind=kind_phys) :: shoc_parm(5)   = (/7000.0,1.0,4.2857143,0.7,-999.0/)  !< some tunable parameters for shoc
 
 !--- Rayleigh friction
     real(kind=kind_phys) :: prslrd0        = 0.0d0           !< pressure level from which Rayleigh Damping is applied
@@ -3148,7 +3223,7 @@ module GFS_typedefs
                                do_myjsfc, do_myjpbl,                                        &
 #endif
                                h2o_phys, pdfcld, shcnvcw, redrag, hybedmf, satmedmf,        &
-                               shinhong, do_ysu, dspheat, lheatstrg, cnvcld,                &
+                               shinhong, do_ysu, dspheat, lheatstrg, cnvcld, shoc_diag,     & 
                                random_clds, shal_cnv, imfshalcnv, imfdeepcnv, isatmedmf,    &
                                do_deep, jcap,                                               &
                                cs_parm, flgmin, cgwf, ccwf, cdmbgwd, sup, ctei_rm, crtrh,   &
@@ -3498,6 +3573,7 @@ module GFS_typedefs
     Model%shoc_parm        = shoc_parm
     Model%shocaftcnv       = shocaftcnv
     Model%shoc_cld         = shoc_cld
+    Model%shoc_diag        = shoc_diag
 #ifdef CCPP
     if (oz_phys .and. oz_phys_2015) then
        write(*,*) 'Logic error: can only use one ozone physics option (oz_phys or oz_phys_2015), not both. Exiting.'
@@ -3699,6 +3775,8 @@ module GFS_typedefs
     Model%ntsnc            = get_tracer_index(Model%tracer_names, 'snow_nc',    Model%me, Model%master, Model%debug)
     Model%ntgnc            = get_tracer_index(Model%tracer_names, 'graupel_nc', Model%me, Model%master, Model%debug)
     Model%ntke             = get_tracer_index(Model%tracer_names, 'sgs_tke',    Model%me, Model%master, Model%debug)
+    Model%nqtsec           = get_tracer_index(Model%tracer_names, 'qt_sec',     Model%me, Model%master, Model%debug)
+    Model%nthlsec          = get_tracer_index(Model%tracer_names, 'thl_sec',    Model%me, Model%master, Model%debug)
 #ifdef CCPP
     Model%nqrimef          = get_tracer_index(Model%tracer_names, 'q_rimef',    Model%me, Model%master, Model%debug)
 #endif
@@ -3887,20 +3965,60 @@ module GFS_typedefs
 
 
 !--- BEGIN CODE FROM COMPNS_PHYSICS
-!--- shoc scheme
-    if (do_shoc) then
-      Model%nshoc_3d   = 3
-      Model%nshoc_2d   = 0
-      Model%shal_cnv   = .false.
-      Model%imfshalcnv = -1
-      Model%hybedmf    = .false.
+!--- SHOC scheme
+!    if (do_shoc) then
+!      Model%nshoc_3d   = 3
+!      Model%nshoc_2d   = 0
+!      Model%shal_cnv   = .false.
+!      Model%imfshalcnv = -1
+!      Model%hybedmf    = .false.
+!      Model%satmedmf   = .false.
+!      if (Model%me == Model%master) print *,' Simplified Higher Order Closure Model used for', &
+!                                            ' Boundary layer and Shallow Convection',          &
+!                                            ' nshoc_3d=',Model%nshoc_3d,                       &
+!                                            ' nshoc_2d=',Model%nshoc_2d,                       &
+!                                            ' ntke=',Model%ntke,' shoc_parm=',shoc_parm
+!    endif
+
+  if (do_shoc) then
+       if (Model%ntke == NO_TRACER) then
+           if (Model%me == Model%master) print *, "TKE is missing from the list of tracers, can't run SHOC. Please add sgs_tke to the field_table. Job aborted"
+           stop
+        endif
+
+       Model%nshoc_2d   = 0
+       Model%shal_cnv   = .false.
+       Model%imfshalcnv = -1
+       Model%hybedmf    = .false.
       Model%satmedmf   = .false.
-      if (Model%me == Model%master) print *,' Simplified Higher Order Closure Model used for', &
-                                            ' Boundary layer and Shallow Convection',          &
+      if (Model%shoc_parm(6)==1) then    ! SHOC Version
+! SHOC v1
+      Model%nshoc_3d   = 3
+      if (Model%me == Model%master) print *,' Simplified Higher Order Closure (SHOC) Version 1 is being used for', &
+                                            ' boundary layer, shallow convection, and cloud macrophysics', &
                                             ' nshoc_3d=',Model%nshoc_3d,                       &
                                             ' nshoc_2d=',Model%nshoc_2d,                       &
                                             ' ntke=',Model%ntke,' shoc_parm=',shoc_parm
+
+    else
+! SHOC v2
+!       Model%nshoc_3d   = 7
+        Model%nshoc_3d   = 8
+
+        if (Model%nqtsec == NO_TRACER .or. Model%nthlsec == NO_TRACER ) then
+           if (Model%me == Model%master) print *, "Either the variance of total water or the variance of MSE is missing from the list of tracers, can't run SHOC Version 2. Please add both qt_sec and thl_sec to the field_table. Job aborted"
+           stop
+        endif
+      if (Model%me == Model%master) print *,' Simplified Higher Order Closure (SHOC) Version 2 is being used for',  &
+                                            ' boundary layer, shallow convection, and cloud macrophysics', &
+                                            ' nshoc_3d=',Model%nshoc_3d,                       &
+                                            ' nshoc_2d=',Model%nshoc_2d,                       &
+                                            ' ntke=',Model%ntke,' shoc_parm=',shoc_parm,       &
+                                            ' nqtsec=',Model%nqtsec,                           &
+                                            ' nthlsec=',Model%nthlsec
     endif
+   endif
+
 
 #ifdef CCPP
     !--- mynn-edmf scheme
@@ -4550,6 +4668,7 @@ module GFS_typedefs
       print *, ' do_aw             : ', Model%do_aw
       print *, ' flx_form          : ', Model%flx_form
       print *, ' do_shoc           : ', Model%do_shoc
+      print *, ' shoc_diag         : ', Model%shoc_diag
       print *, ' shoc_parm         : ', Model%shoc_parm
       print *, ' shocaftcnv        : ', Model%shocaftcnv
       print *, ' shoc_cld          : ', Model%shoc_cld
@@ -5196,6 +5315,69 @@ module GFS_typedefs
 !      allocate (Diag%cldcov (IM,Model%levs))
     endif
 
+if (Model%shoc_diag) then
+
+
+        allocate (Diag%SHOC_qt (IM,Model%levs))
+        allocate (Diag%SHOC_hl (IM,Model%levs))
+        allocate (Diag%SHOC_w  (IM,Model%levs))
+
+        allocate (Diag%SHOC_qt_qt (IM,Model%levs))
+        allocate (Diag%SHOC_hl_hl (IM,Model%levs))
+        allocate (Diag%SHOC_w_w   (IM,Model%levs))
+
+        allocate (Diag%SHOC_w_qt  (IM,Model%levs))
+        allocate (Diag%SHOC_w_hl  (IM,Model%levs))
+        allocate (Diag%SHOC_qt_hl (IM,Model%levs))
+
+        allocate (Diag%SHOC_w_w_w (IM,Model%levs))
+        allocate (Diag%SHOC_hl_hl_hl (IM,Model%levs))
+
+        allocate (Diag%SHOC_w_Sk  (IM,Model%levs))
+        allocate (Diag%SHOC_qt_Sk (IM,Model%levs))
+        allocate (Diag%SHOC_hl_Sk (IM,Model%levs))
+
+        allocate (Diag%SHOC_G1_weight (IM,Model%levs))
+
+        allocate (Diag%SHOC_G1_w_nmean (IM,Model%levs))
+        allocate (Diag%SHOC_G1_w_nvar (IM,Model%levs))
+        allocate (Diag%SHOC_G1_qt_nmean (IM,Model%levs))
+        allocate (Diag%SHOC_G1_qt_nvar (IM,Model%levs))
+        allocate (Diag%SHOC_G1_hl_nmean (IM,Model%levs))
+        allocate (Diag%SHOC_G1_hl_nvar (IM,Model%levs))
+        allocate (Diag%SHOC_G1_qt_hl_ncov (IM,Model%levs))
+
+        allocate (Diag%SHOC_G2_w_nmean (IM,Model%levs))
+        allocate (Diag%SHOC_G2_w_nvar (IM,Model%levs))
+        allocate (Diag%SHOC_G2_qt_nmean (IM,Model%levs))
+        allocate (Diag%SHOC_G2_qt_nvar (IM,Model%levs))
+        allocate (Diag%SHOC_G2_hl_nmean (IM,Model%levs))
+        allocate (Diag%SHOC_G2_hl_nvar (IM,Model%levs))
+!        allocate (Diag%SHOC_G2_qt_hl_ncov (IM,Model%levs))
+
+        allocate (Diag%SHOC_eddy_length (IM,Model%levs))
+
+        allocate (Diag%SHOC_TKE_boyancy_prod (IM,Model%levs))
+        allocate (Diag%SHOC_TKE_shear_prod   (IM,Model%levs))
+        allocate (Diag%SHOC_TKE_dissipation  (IM,Model%levs))
+        allocate (Diag%SHOC_TKE_damping_coef (IM,Model%levs))
+
+        allocate (Diag%SHOC_ret2iso_tscale  (IM,Model%levs))
+        allocate (Diag%SHOC_tkh             (IM,Model%levs))
+        allocate (Diag%SHOC_Pr              (IM,Model%levs))
+
+        allocate (Diag%SHOC_qt_qt_shear_prod (IM,Model%levs))
+        allocate (Diag%SHOC_qt_qt_detrainment_prod (IM,Model%levs))
+        allocate (Diag%SHOC_qt_qt_dissipation (IM,Model%levs))
+
+        allocate (Diag%SHOC_hl_hl_shear_prod (IM,Model%levs))
+        allocate (Diag%SHOC_hl_hl_detrainment_prod (IM,Model%levs))
+        allocate (Diag%SHOC_hl_hl_dissipation (IM,Model%levs))
+
+
+    endif
+
+
 !vay-2018
     if (Model%ldiag_ugwp) then
       allocate (Diag%du3dt_dyn  (IM,Model%levs) )
@@ -5498,6 +5680,67 @@ module GFS_typedefs
 !     Diag%dwn_mf   = zero
 !     Diag%det_mf   = zero
     endif
+
+  if (Model%shoc_diag) then
+
+       Diag%SHOC_qt = zero
+       Diag%SHOC_hl = zero
+       Diag%SHOC_w  = zero
+
+       Diag%SHOC_qt_qt = zero
+       Diag%SHOC_hl_hl = zero
+       Diag%SHOC_w_w   = zero
+
+       Diag%SHOC_w_qt  = zero
+       Diag%SHOC_w_hl  = zero
+       Diag%SHOC_qt_hl = zero
+
+       Diag%SHOC_w_w_w = zero
+       Diag%SHOC_hl_hl_hl = zero
+
+       Diag%SHOC_w_Sk  = zero
+       Diag%SHOC_qt_Sk = zero
+       Diag%SHOC_hl_Sk = zero
+
+       Diag%SHOC_G1_weight = zero
+
+       Diag%SHOC_G1_w_nmean = zero
+       Diag%SHOC_G1_w_nvar = zero
+       Diag%SHOC_G1_qt_nmean = zero
+       Diag%SHOC_G1_qt_nvar = zero
+       Diag%SHOC_G1_hl_nmean = zero
+       Diag%SHOC_G1_hl_nvar = zero
+       Diag%SHOC_G1_qt_hl_ncov = zero
+
+       Diag%SHOC_G2_w_nmean = zero
+       Diag%SHOC_G2_w_nvar = zero
+       Diag%SHOC_G2_qt_nmean = zero
+       Diag%SHOC_G2_qt_nvar = zero
+       Diag%SHOC_G2_hl_nmean = zero
+       Diag%SHOC_G2_hl_nvar = zero
+!       Diag%SHOC_G2_qt_hl_ncov = zero
+
+       Diag%SHOC_eddy_length = zero
+
+       Diag%SHOC_TKE_boyancy_prod = zero
+       Diag%SHOC_TKE_shear_prod   = zero
+       Diag%SHOC_TKE_dissipation  = zero
+       Diag%SHOC_TKE_damping_coef = zero
+
+       Diag%SHOC_ret2iso_tscale  = zero
+       Diag%SHOC_tkh             = zero
+       Diag%SHOC_Pr              = zero
+
+       Diag%SHOC_qt_qt_shear_prod = zero
+       Diag%SHOC_qt_qt_detrainment_prod = zero
+       Diag%SHOC_qt_qt_dissipation = zero
+
+       Diag%SHOC_hl_hl_shear_prod = zero
+       Diag%SHOC_hl_hl_detrainment_prod = zero
+       Diag%SHOC_hl_hl_dissipation = zero
+
+    endif
+
 
 !
 !-----------------------------
