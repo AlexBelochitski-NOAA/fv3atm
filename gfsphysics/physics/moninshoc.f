@@ -80,7 +80,7 @@
      &,                     dkmin=0.0,    dkmax=1000.
 !    &,                     dkin=0.0,    dkmax=1000.,    xkzminv=0.3
      &,                     gocp=grav/cp, prmin=0.25,     prmax=4.0
-     &,                     vk=0.4, cfac=6.5
+     &,                     vk=0.4, cfac=6.5, rimax = 100
 
 
 
@@ -509,7 +509,11 @@
 ! TKE equation 
      &           / (thvx(i,k)+thvx(i,kp1)) 
 ! Gradient Ri
-            ri   = max(bvf2/tem,rimin)
+            if (tem == 0.) then
+               ri = rimax
+            else
+               ri   = max(bvf2/tem,rimin)
+            endif
 ! new
 ! Free atmosphere
           if(k >= kpbl(i)) then

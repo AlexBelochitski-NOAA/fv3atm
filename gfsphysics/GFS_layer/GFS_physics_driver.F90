@@ -2375,6 +2375,7 @@ module module_physics_driver
                          Statein%prslk, Statein%phii, Statein%phil, dtp, dusfc1,   &
                          dvsfc1, dtsfc1, dqsfc1, dkt, Diag%hpbl, kinver,           &
                          Model%xkzm_m, Model%xkzm_h, Model%xkzm_s, Model%xkzminv,  &
+                         xkzo, xkzmo,    &
                          lprnt, ipr, me)
 !  if (lprnt) write(0,*)'aftmonshoc=',Statein%tgrs(ipr,:)
 !  if (lprnt) write(0,*)'aftmonshocq=',Statein%qgrs(ipr,:,1)
@@ -3704,10 +3705,11 @@ module module_physics_driver
 !         call shoc (ix, im, 1, levs, levs+1, dtp, me, 1, Staotein%prsl(1,1),  &
 !     write(0,*)' before shoc hflx=',hflxq, ' me=',me
 !     write(0,*)' before shoc evap=',evapq,' me=',me
-          call shoc (ix, im, levs, levs+1, dtp, me, 1, Statein%prsl(1,1), del,&
+          call shoc (ix, im, 1, levs, levs+1, dtp, me, 1, Statein%prsl(1,1), del,&
                      Statein%phii(1,1), Statein%phil(1,1), Stateout%gu0(1,1), &
                      Stateout%gv0(1,1), Statein%vvl(1,1), Stateout%gt0(1,1),  &
                      Stateout%gq0(1,1,1), clw(1,1,1), clw(1,1,2), qsnw, qrn,  &
+                     dtabsdt, dqwvdt, dqcidt, dqcldt, dqpidt, dqpldt,        &
                      rhc, Model%sup, Model%shoc_parm(1), Model%shoc_parm(2),  &
                      Model%shoc_parm(3), Model%shoc_parm(4),                  &
                      Model%shoc_parm(5), Tbd%phy_f3d(1,1,ntot3d-2),           &
@@ -4593,6 +4595,7 @@ module module_physics_driver
                    Statein%phii(1,1), Statein%phil(1,1), Stateout%gu0(1,1),   &
                    Stateout%gv0(1,1), Statein%vvl(1,1), Stateout%gt0(1,1),    &
                    Stateout%gq0(1,1,1), clw(1,1,1), clw(1,1,2), qsnw, qrn,    &
+                   dtabsdt, dqwvdt, dqcidt, dqcldt, dqpidt, dqpldt,           &
                    rhc, Model%sup, Model%shoc_parm(1), Model%shoc_parm(2),    &
                    Model%shoc_parm(3), Model%shoc_parm(4),                    &
                    Model%shoc_parm(5), Tbd%phy_f3d(1,1,ntot3d-2),             &

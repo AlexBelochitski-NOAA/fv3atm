@@ -25,7 +25,7 @@
                  dqpldt, rhc, supice,                            &
                  pcrit, cefac, cesfac, tkef1, dis_opt,           &
                  cld_sgs, tke, hflx, evap, prnum, tkh,           &
-                 wthv_sec, lprnt, ipr, ncpl, ncpi,               &
+                 wthv_sec, lprnt, ipr,imp_phys,     ncpl, ncpi,  &
                  qw_sec, thl_sec, wthl2, wqw2,                   &
 !                 detrained_varqt, detrained_varthl, shoc_version)
                  detrained_varqt, detrained_varthl,              &
@@ -62,6 +62,7 @@
   integer, intent(in) :: nzm   ! Number of vertical layers
   integer, intent(in) :: nz    ! Number of layer interfaces  (= nzm + 1)   
   real,    intent(in) :: dtn   ! Physics time step, s 
+  integer, intent(in) :: imp_phys ! microphysics identifier
   real,    intent(in) :: pcrit ! pressure in Pa below which additional tke 
                                ! dissipation is applied
   real,    intent(in) :: cefac   ! tunable multiplier to dissipation term 
@@ -154,7 +155,7 @@
 !--------------------------------
 
 ! Minimum and maximum values of individual gaussians' weights
-  real, parameter :: atmin=0.01, atmax=one-atmin 
+  real, parameter :: atmin=0.0001, atmax=one-atmin 
   real, parameter :: atmin_damp=0.05, atmax_damp=one-atmin_damp 
 ! Damping coefficient in the TKE equation (and the "return to isotropy" damping time scale
 ! in the prognostic variance equations) will be multiplied by (at_damp_strength+1) for the
@@ -175,7 +176,7 @@
 ! If the switch below is set to  .true., the code uses the parameterization.
   logical, parameter :: variable_normalized_width_w = .true.
 ! Paramter, controlling magnitude of normalized variances
-  real,    parameter :: gamma_vnww = 1. !  0.32 ! 0 < gamma_vnww < 1
+  real,    parameter :: gamma_vnww = 0.32 ! 0 < gamma_vnww < 1
 
 !--------------------------------------------------------------------------
 ! Options for parameterizations of skewness of MSE and total water SGS PDFs
@@ -195,7 +196,7 @@
 ! expressions for the third moment of MSE using the Canuto et al (2001) approach.  
 ! If the switch below is set to  .true., the code uses the expression
 ! based on Canuto et al (2001)
-  logical, parameter :: canuto_skew  = .true. 
+  logical, parameter :: canuto_skew  = .false. 
 ! Proportionality coefficient between skewness of MSE and skewness of total water, used only
 ! when  canuto_skew  = .true., in enssence parametrizing skewness of Qt in terms of MSE Sk. 
 ! The basis for this parameterization is the observation of Zhu and Zuidema (2009) that in 
@@ -216,9 +217,9 @@
 ! stratocumulus in global NCAR CAM simulations with CLUBB. 
 ! When larson_golaz_05_skew is set to .true.,  parameterization of variable normalized 
 ! width of individual W gaussians is also used.
-  logical, parameter :: larson_golaz_05_skew        = .false. 
+  logical, parameter :: larson_golaz_05_skew        = .true. 
 ! Parameter, controlling relationship betwen skewness of W SGS PDFs with other Sk of scalars.
-  real,    parameter :: beta_factor  = 3 !1.75 ! 0 <= beta_factor  <= 3
+  real,    parameter :: beta_factor  = 1.75 ! 0 <= beta_factor  <= 3
 
 !------------------------------------
 ! Contrains on the moments of SGS PDF
@@ -308,7 +309,7 @@
   real, parameter :: mu = 20    ! Numerical viscosity, m**2/s, curently not used
 
 ! Tuning parameters for variance source term from detrainment
-  real, parameter  :: tune_varthl=1., tune_varqt=1.
+  real, parameter  :: tune_varthl=0., tune_varqt=0.
 
 !-----------------------------------
 ! Tie-in with a microphysical scheme
@@ -439,6 +440,17 @@
 
   integer i,j,k,km1,ku,kd,ka,kb, itr
 
+  logical, save :: first_call = .true.
+
+! A cludge to deal with GFS restarts that do not have SHOC's tracers
+  if (first_call) then
+     
+     tke     = 0.
+     qw_sec  = 0.
+     thl_sec = 0.
+     first_call = .false.
+
+  endif
 
 ! Map GFS variables to those of SHOC - SHOC operates on 3D fields
 ! Here a Y-dimension is added to the input variables, along with some unit conversions
@@ -718,7 +730,8 @@
            if (k == 1) then 
 ! On the first level use surface byoancy flux
               sflux(i,j)=hflx(i)+evap(i)*epsv*tabs(i,j,1)*(100000.0/prsl(i,k,1))**kapa
-              brunt(i,j,1) = - 2*ggr*sflux(i,j)/(thv(i,j,k)*(tkh(i,j,ku)+tkh(i,j,kd) + 0.0001))
+!              brunt(i,j,1) = - 2*ggr*sflux(i,j)/(thv(i,j,k)*(tkh(i,j,ku)+tkh(i,j,kd) + 0.0001))
+             brunt(i,j,k) = - 2*ggr*wthv_sec(i,j,k)/(thv(i,j,k)*(tkh(i,j,ku)+tkh(i,j,kd) + 0.0001))
            else
               brunt(i,j,k) = - 2*ggr*wthv_sec(i,j,k)/(thv(i,j,k)*(tkh(i,j,ku)+tkh(i,j,kd) + 0.0001))
            endif
@@ -909,16 +922,20 @@
            
            if (wrk3 > 0) then
            if ( tke(i,j,k)/wrk3 >  5 .and. wrk3 > 10) &
+!           if ( isotropy(i,j,k) > 300. .and.  wthl_sec(i,j,k)  > 5.  ) then 
                   print *, "smixt=", smixt(i,j,k), " k=", k," zl=", zl(i,j,k), &
                   " l_inf=", l_inf(i,j),  &
-                  " tke", tke(i,j,k), " brunt=", brunt(i,j,k), " brunt_test=", brunt_test(i,j,k), &
+                  " tke", tke(i,j,k), " brunt=", brunt(i,j,k), " brunt(k-1)=", brunt(i,j,k-1),  &
+                  " brunt_test=", brunt_test(i,j,k), &
                   " qcl(i,j,k)=", qcl(i,j,k), " qci(i,j,k)=", qci(i,j,k), &
                   " isotropy=", isotropy(i,j,k) ," tkesbdiss=", tkesbdiss(i,j,k) ,  &
                   " a_prod_sh=", a_prod_sh, " a_prod_bu=", a_prod_bu, " Cee=", Cee, &
                   " tke_orig=", wrk3, " wrk=", wrk, " wrk1=", wrk1," a_diss=", a_diss, &
                   " def2(i,j,k)=", def2(i,j,k)," tkh(i,j,ku)=", tkh(i,j,ku), "prnum(i,j,ku)=" ,prnum(i,j,ku),  &
-                  " tkh(i,j,ku)=", tkh(i,j,kd), "prnum(i,j,ku)=" ,prnum(i,j,kd), &
-                  " tke_history=", tke_history
+                  " tkh(i,j,ku)=", tkh(i,j,kd), "prnum(i,j,kd)=" ,prnum(i,j,kd), &
+!                  " tke_history=", tke_history
+                  " tscale1=", tscale1, " thv(i,j,k)=", thv(i,j,k), " sflux(i,j)=", sflux(i,j), &
+                  " wthv_sec(i,j,k)=", wthv_sec(i,j,k)
            endif 
                
             deallocate(tke_history)
@@ -1082,16 +1099,41 @@
 !               No rain, snow or graupel in pdf (Annig, 08/29/2018)
 !                       + (qpl(i,k) - qpl(i,km1)) * fac_cond &
 !                       + (qpi(i,k) - qpi(i,km1)) * fac_sub
-        wthl_sec_d(i,j,k) = - wrk3 * wrk1
-!        wthl_sec(i,j,k) = - wrk3 * wrk1
+!        wthl_sec_d(i,j,k) = - wrk3 * wrk1
+        wthl_sec(i,j,k) = - wrk3 * wrk1
+
+        if (wthl_sec(i,j,k) > 5 ) then
+           print *, " wrk1=",  one / adzi(i,j,k) , " wrk3=", wrk3, " tkh(i,j,k)=", tkh(i,j,k), &
+                " wrk1 =", wrk1, " hl(i,j,k)=", hl(i,j,k)," hl(i,j,km1)=", hl(i,j,km1), " k=", k, &
+                " km1=", km1, " i=", i, &
+                 " wthl_sec(i,j,k)=", wthl_sec(i,j,k), " tabs(i,j,k)=", tabs(i,j,k), " gamaz(i,j,k)=", &
+                 gamaz(i,j,k), "  fac_cond*(qcl(i,j,k)+qpl(i,j,k))=",  fac_cond*(qcl(i,j,k)+qpl(i,j,k)), &
+                 " fac_sub *(qci(i,j,k)+qpi(i,j,k))=", fac_sub *(qci(i,j,k)+qpi(i,j,k)), &
+                 " xkzo(i,j,k) =", xkzo(i,j,k),"  tkh_out(i,j,:)=",  tkh_out(i,j,k), " tke(i,j,:)=", tke(i,j,k), &
+                 " isotropy(i,j,:)=", isotropy(i,j,k), &
+                  "smixt=", smixt(i,j,k), " k=", k," zl=", zl(i,j,k), &
+                  " l_inf=", l_inf(i,j),  &
+                  " tke", tke(i,j,k), " brunt=", brunt(i,j,k), " brunt(k-1)=", brunt(i,j,k-1),  &
+                  " brunt_test=", brunt_test(i,j,k), &
+                  " qcl(i,j,k)=", qcl(i,j,k), " qci(i,j,k)=", qci(i,j,k), &
+                  " isotropy=", isotropy(i,j,k) ," tkesbdiss=", tkesbdiss(i,j,k) ,  &
+                  " a_prod_sh=", a_prod_sh, " a_prod_bu=", a_prod_bu, " Cee=", Cee, &
+                  " tke_orig=", wrk3, " wrk=", wrk, " wrk1=", wrk1," a_diss=", a_diss, &
+                  " def2(i,j,k)=", def2(i,j,k)," tkh(i,j,ku)=", tkh(i,j,ku), "prnum(i,j,ku)=" ,prnum(i,j,ku),  &
+                  " tkh(i,j,ku)=", tkh(i,j,kd), "prnum(i,j,kd)=" ,prnum(i,j,kd), &
+!                  " tke_history=", tke_history
+                  " tscale1=", tscale1, " thv(i,j,k)=", thv(i,j,k), " sflux(i,j)=", sflux(i,j), &
+                  " wthv_sec(i,j,k)=", wthv_sec(i,j,k)
+
+        endif
 
 ! SGS vertical flux of total water. Eq 2 in BK13
 
         wrk2           = total_water(i,j,k) - total_water(i,j,km1)
-        wqw_sec_d(i,j,k) = - wrk3 * wrk2
-!        wqw_sec(i,j,k) = - wrk3 * wrk2
+!        wqw_sec_d(i,j,k) = - wrk3 * wrk2
+        wqw_sec(i,j,k) = - wrk3 * wrk2
 
-!        if (.false.) then
+        if (.false.) then
 ! Calculate diffusive flux of MSE from diffusive fluxes of temperature, moisture, 
 ! and condensate computed by the vertical diffusion solver
         wthl_sec(i,j,k) =  wthl_sec(i,j,k-1) - adzl(i,j,k-1)*(dtabsdt(i,j,k-1)     -  &
@@ -1100,7 +1142,7 @@
                           gocp*(tkh(i,j,ku) - tkh(i,j,kd))
 
         
-         if (.false.) then
+!         if (.false.) then
 !        if ( wthl_sec(i,j,k) > 1. ) then 
 !           if (abs((wthl_sec_d(i,j,k)- wthl_sec(i,j,k))/ wthl_sec(i,j,k)) < 10) &
                 
@@ -1129,9 +1171,11 @@
 
 ! Calculate diffusive flux of total water from diffusive fluxes of  moisture
 ! and condensate computed by the vertical diffusion solver                            
-        wqw_sec(i,j,k) =  wqw_sec(i,j,k-1)  - adzl(i,j,k-1)*(dqwvdt(i,j,k-1)     +  &
-                                           dqcldt(i,j,k-1) + dqcidt(i,j,k-1))
+!        wqw_sec(i,j,k) =  wqw_sec(i,j,k-1)  - adzl(i,j,k-1)*(dqwvdt(i,j,k-1)     +  &
+!                                           dqcldt(i,j,k-1) + dqcidt(i,j,k-1))
 
+
+! Incorrect
 !       wqp_sec (i,j,k) = wqp_sec(i,j,k-1)  - adzl(i,j,k-1)*(dqpldt(i,j,k-1) + dqpidt(i,j,k-1))
 
 !     endif
@@ -1248,7 +1292,7 @@
 !                    wrk3,2*wrk2*wrk3,1 + Cv*dts/isotropy(i,j,k), dts, tune_varthl*detrained_varthl(i,j,k),  &
 !                    wrk1 + 2*wrk2*wrk3 - tune_varthl*detrained_varthl(i,j,k),  &
 !                    (wrk1 + 2*wrk2*wrk3 - tune_varthl*detrained_varthl(i,j,k))*dts, thl_sec(i,j,k), k
-               if (thl_sec(i,j,k) > 2e3) print *, "debug thl", wrk1, wrk2, &
+               if (thl_sec(i,j,k) > 2e2) print *, "debug thl", wrk1, wrk2, &
                     wrk3,2*wrk2*wrk3,1 + half*wrk, 1- half*wrk, dts, tune_varthl*detrained_varthl(i,j,k),  &
                     wrk1 + 2*wrk2*wrk3 - tune_varthl*detrained_varthl(i,j,k),  &
                     (wrk1 + 2*wrk2*wrk3 - tune_varthl*detrained_varthl(i,j,k))*dts, "thl_sec", thl_sec(i,j,k), k, "wth_sec", wthl_sec(i,j,k), wthl_sec(i,j,k+1),  "hl", hl(i,j,k-1),  hl(i,j,k),  hl(i,j,k+1), one / adzi(i,j,k), "tkh" , max(tkh(i,j,k-1),epsln), tkh(i,j,k),  tkh(i,j,k+1), max(tkh(i,j,k),epsln)/ adzi(i,j,k), "tkh_lin", tke_int(i,j,k-1),  tke_int(i,j,k),  tke_int(i,j,k+1), "tke", tke(i,j,k-1), tke(i,j,k), tke(i,j,k+1), "isotropy", isotropy(i,j,k-1),  isotropy(i,j,k),  isotropy(i,j,k+1), "isotropy_int",  isotropy_int(i,j,k-1), isotropy_int(i,j,k),  isotropy_int(i,j,k+1),  "zi", zi(i,j,k-1),  zi(i,j,k),  zi(i,j,k+1), zi(i,j,k+2), "zl", zl(i,j,k-1),  zl(i,j,k),  zl(i,j,k+1), zl(i,j,k+2), "wthl2", wthl2(i,j,k-1), wthl2(i,j,k), wthl2(i,j,k+1),  wthl2(i,j,k+2), " dwthl2dz",  dwthl2dz(i,j,k-1),  dwthl2dz(i,j,k),  dwthl2dz(i,j,k+1), "w_sec", w_sec(i,j,k-1), w_sec(i,j,k), w_sec(i,j,k+1),  w_sec(i,j,k+2),  w_sec(i,j,k+3), "w_sec_int", w_sec_int(i,j,k-1), w_sec_int(i,j,k), w_sec_int(i,j,k+1),  w_sec_int(i,j,k+2)
@@ -2945,8 +2989,12 @@ contains
              
 !          endif
 
-
-             wrk =  one / ( w_sec(i,j,k)*(one - w2_1) )
+             wrk =  ( w_sec(i,j,k)*(one - w2_1) )
+             if (wrk .ne. zero) then 
+                wrk =  one / wrk
+             else 
+                wrk = zero
+             end if
 
 ! Modification of Eq. 26 in GLC02
         if (k == 1) then
