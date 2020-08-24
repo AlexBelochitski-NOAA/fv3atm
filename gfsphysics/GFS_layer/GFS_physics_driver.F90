@@ -824,22 +824,24 @@ module module_physics_driver
 
 !
 !-------------------------------------------------------------------------------------------
-!     lprnt   = .false.
+     lprnt   = .false.
 
-!     do i=1,im
-!       lprnt = kdt >=   1 .and. abs(grid%xlon(i)*rad2dg-29.55) < 0.201  &
-!                          .and. abs(grid%xlat(i)*rad2dg+59.62) < 0.201
+     do i=1,im
+       lprnt = kdt >=   1 .and. abs(grid%xlon(i)*rad2dg-148.1960) < 0.201  &
+                          .and. abs(grid%xlat(i)*rad2dg+21.28997) < 0.201
+       lprnt = kdt >=   1 .and. abs(grid%xlon(i)*rad2dg-298.9526) < 0.201  &
+                          .and. abs(grid%xlat(i)*rad2dg+22.82160) < 0.201
 !       lprnt = kdt >=   1 .and. abs(grid%xlon(i)*rad2dg-169.453) < 0.501  &
 !                          .and. abs(grid%xlat(i)*rad2dg-72.96) < 0.501
 !       if (kdt == 1) &
 !         write(2000+me,*)' i=',i,' xlon=',grid%xlon(i)*rad2dg,          &
 !                       ' xlat=',grid%xlat(i)*rad2dg,' me=',me
-!       if (lprnt) then
-!         ipr = i
-!         write(0,*)' ipr=',ipr,'xlon=',grid%xlon(i)*rad2dg,' xlat=',grid%xlat(i)*rad2dg,' me=',me
-!         exit
-!       endif
-!     enddo
+       if (lprnt) then
+         ipr = i
+         write(0,*)' ipr=',ipr,'xlon=',grid%xlon(i)*rad2dg,' xlat=',grid%xlat(i)*rad2dg,' me=',me
+         exit
+       endif
+     enddo
 !     if (lprnt) write(0,*)' sfcprop%tisfc=',Sfcprop%tisfc(ipr),' kdt=',kdt, &
 !    ' fice=',Sfcprop%fice(ipr),' ulw=',Coupling%ulwsfcin_cpl(ipr),          &
 !    ' tsfc=',Sfcprop%tsfc(ipr)

@@ -109,6 +109,7 @@
 !  real :: xkzo   (nx,ny,nzm)   ! Background diffusivity for heat
 !  real :: xkzmo  (nx,ny,nzm)   ! Background diffusivity for momentum
   real :: tkh_out  (ix,ny,nzm)   ! eddy diffusivity for heat
+  real :: tkh_out1  (ix,ny,nzm)   ! eddy diffusivity for heat
 
 ! SHOC v2 support  
 
@@ -155,7 +156,7 @@
 !--------------------------------
 
 ! Minimum and maximum values of individual gaussians' weights
-  real, parameter :: atmin=0.0001, atmax=one-atmin 
+  real, parameter :: atmin=0.01, atmax=one-atmin 
   real, parameter :: atmin_damp=0.05, atmax_damp=one-atmin_damp 
 ! Damping coefficient in the TKE equation (and the "return to isotropy" damping time scale
 ! in the prognostic variance equations) will be multiplied by (at_damp_strength+1) for the
@@ -174,7 +175,7 @@
 ! introduced  a parameterization of variable normalized width of individual W gaussians
 ! (as opposed to a fixed value of 0.4 in the original formulations of SHOC and CLUBB).
 ! If the switch below is set to  .true., the code uses the parameterization.
-  logical, parameter :: variable_normalized_width_w = .true.
+  logical, parameter :: variable_normalized_width_w = .false. !.true.
 ! Paramter, controlling magnitude of normalized variances
   real,    parameter :: gamma_vnww = 0.32 ! 0 < gamma_vnww < 1
 
@@ -217,7 +218,7 @@
 ! stratocumulus in global NCAR CAM simulations with CLUBB. 
 ! When larson_golaz_05_skew is set to .true.,  parameterization of variable normalized 
 ! width of individual W gaussians is also used.
-  logical, parameter :: larson_golaz_05_skew        = .true. 
+  logical, parameter :: larson_golaz_05_skew        = .false. !.true. 
 ! Parameter, controlling relationship betwen skewness of W SGS PDFs with other Sk of scalars.
   real,    parameter :: beta_factor  = 1.75 ! 0 <= beta_factor  <= 3
 
@@ -225,13 +226,13 @@
 ! Contrains on the moments of SGS PDF
 !------------------------------------
  
-  real, parameter :: w_tol     = 2.0e-02    ! Min value of sqrt(second moment of w), m/s   
+  real, parameter :: w_tol     = 1e-3 !2.0e-02    ! Min value of sqrt(second moment of w), m/s   
   real, parameter :: w_tol_sqd = w_tol*w_tol ! Min value of second moment of w squared
   real, parameter :: w3_tol = 1e-20         ! Min value of third moment of w
 ! Distance between normalized means of W gaussians below which PDF turns into double delta function
   real, parameter :: w_thresh  = 0.0     
-  real, parameter :: thl_tol  = 1.e-2  ! Min value of sqrt(second moment of MSE), K
-  real, parameter :: rt_tol = 1.e-4    ! Min value of sqrt(second moment of tot. water),g/g
+  real, parameter :: thl_tol  = 1e-4 !1.e-2  ! Min value of sqrt(second moment of MSE), K
+  real, parameter :: rt_tol = 1e-8 !1.e-4    ! Min value of sqrt(second moment of tot. water),g/g
 !                    thl_tol  = 1.e-2, rt_tol = 1.e-8 !CLUBB values
 ! Tuning coefficients in diagnostic expressions for higher order moments
   real, parameter :: thl2tune = 1.0,  qw2tune = 1.0,  qwthl2tune = 1.0
@@ -251,8 +252,8 @@
 ! to eddy length scale under stable conditions 
   real, parameter :: slts = pt01
 ! Maximum measure of PBL height, m * 1e-2
-!  real, parameter :: max_l_inf = 100.0
-  real, parameter :: max_l_inf = 300.0
+  real, parameter :: max_l_inf = 100.0
+!  real, parameter :: max_l_inf = 300.0
 
 ! Maximum "return-to-isotropy" time scale, s
 !  real, parameter :: max_eddy_dissipation_time_scale =  400.0
@@ -263,6 +264,8 @@
 ! Threshold on the minimum amount of condensate that SHOCv2 will consider to be cloud to avoid 
 ! situations  where SHOC uses its in-cloud length scale on levels too close to the surface, kg/kg
   real, parameter :: thresh =  1.e-8
+  real, parameter :: qt_thresh =  5.e-6
+  real, parameter :: qi_thresh =  1.e-8
 !  Set cloud top as the level with the most negative boyuancy flux, otherwise 
 !  cloud top is at the level with cloud condensate below threshold thresh
   logical, parameter :: cloud_top_at_min_negative_boyu_flux = .true.
@@ -276,7 +279,7 @@
 ! and then the solution is iterated for convergence. 
   integer, parameter :: nitr = 6
 
-  real, parameter :: min_tke = 1e-10  ! Minumum TKE value, m**2/s**2 
+  real, parameter :: min_tke = 1e-8  ! Minumum TKE value, m**2/s**2 
   real, parameter :: max_tke = 100.0 ! Maximum TKE value, m**2/s**2 
   real, parameter :: epsln=1.0e-6    ! Minumum value of eddy diffusivity
   real, parameter :: tkhmax=300.0    ! Maximum value of eddy diffusivity
@@ -288,8 +291,8 @@
   real, parameter :: Cs  = 0.15
   real, parameter :: Ck  = 0.1     
   real, parameter :: Ce  = 4*Ck**3/Cs**4  ! Coefficient in the TKE diss. term
-  real, parameter :: Ces = Ce 
-          ! Coefficient in the TKE diss. term at sfc
+!  real, parameter :: Ce  = Ck**3/Cs**4  ! Coefficient in the TKE diss. term
+  real, parameter :: Ces = Ce             ! Coefficient in the TKE diss. term at sfc
 ! Original values below, Ce ~ 2, Ces ~ 8.5
 ! real, parameter :: Ce  = Ck**3/Cs**4, Ces = Ce*3.0/0.7
 
@@ -305,7 +308,7 @@
 ! Number of substeps in the prognostic variances solver
   integer, parameter :: substep=10
 
-  real, parameter :: Cv = 1.04   ! Damping coefficient in prognostic variance eqns
+  real, parameter :: Cv = 4*1.04   ! Damping coefficient in prognostic variance eqns
   real, parameter :: mu = 20    ! Numerical viscosity, m**2/s, curently not used
 
 ! Tuning parameters for variance source term from detrainment
@@ -324,7 +327,7 @@
 ! Linear interpolation in between
   real, parameter :: a_bg   = one/(tbgmax-tbgmin)
 ! Condesation options
-  logical, parameter :: Firl_condensation = .true.  
+  logical, parameter :: Firl_condensation = .false. !.true.  
 
 !--------------------------------------------------------------
 ! Mode of interpolation from layer centers to layer interfaces:
@@ -374,7 +377,7 @@
   real tkm      (ix,ny,nzm) ! eddy diffusivity for momentum
 
 ! Coefficient in the TKE dissipation term
-!  real Cek(nx,ny)
+  real Cek_tke(nx,ny,nzm)
 
 ! Variables interpolated to layer interfaces
   real tke_int      (nx,ny,nzm) ! turbulent kinetic energy interpolated to layer interfaces, m**2/s**2  
@@ -410,7 +413,10 @@
 
   real, dimension(nx,ny,nzm) :: total_water, brunt2, thv, tkesbdiss, brunt_test
   real, dimension(nx,ny,nzm) :: def2
-  real, dimension(nx,ny)     :: denom, numer, l_inf, cldarr, thedz, thedz2, sflux
+!  real, dimension(nx,ny)     :: denom, numer, l_inf, cldarr, thedz, thedz2, sflux
+  real, dimension(nx,ny)     :: denom, numer, l_inf, thedz, thedz2, sflux
+!  logical, dimension(nx,ny)  :: cbl_top 
+  integer, dimension(nx,ny)  :: cbl_top, cldarr
 
   real, dimension(nx,ny,nzm) :: dthldz, dqwdz, dwthl2dz, dwqw2dz, deltathl, deltaqw
 
@@ -438,9 +444,13 @@
 
   real, allocatable :: tke_history(:)
 
-  integer i,j,k,km1,ku,kd,ka,kb, itr
+  integer i,j,k,km1,ku,kd,kdd,ka,kb, itr
 
   logical, save :: first_call = .true.
+
+  logical ::  flag
+
+  flag = .true.
 
 ! A cludge to deal with GFS restarts that do not have SHOC's tracers
   if (first_call) then
@@ -449,6 +459,17 @@
      qw_sec  = 0.
      thl_sec = 0.
      first_call = .false.
+
+! Initialize damping coefficients for the TKE eqn on the first time step
+!        if (Cek(i,j,k) == clear_val) then
+!           if (k == 1) then
+!              Cek(i,j,k) = ces * cesfac
+!           else
+!              Cek(i,j,k) = ce  * cefac
+!           endif
+!        endif
+
+        Cek = 1.  !Cv
 
   endif
 
@@ -578,14 +599,6 @@
 
         brunt(i,j,k) = zero
 
-! Initialize damping coefficients for the TKE eqn on the first time step
-        if (Cek(i,j,k) == clear_val) then
-           if (k == 1) then
-              Cek(i,j,k) = ces * cesfac
-           else
-              Cek(i,j,k) = ce  * cefac
-           endif
-        endif
 
 !        tkh(i,j,k)= tkh(i,j,k) + xkzo(i,j,k)
 !        tkm(i,j,k)= tkh(i,j,k)*prnum(i,j,k) + xkzmo(i,j,k)
@@ -598,7 +611,9 @@
 
 ! Apply background diffusivity to SHOC's diffusivity coefficients
   do k=1,nzm-1
+!  do k=1,nzm
      ku = k + 1
+!     ku = k
      do j=1,ny
         do i=1,nx
 
@@ -610,6 +625,9 @@
         enddo
      enddo
   enddo
+
+  tkh(:,1,1)= tkh(:,1,2)
+  tkm(:,1,1)= tkm(:,1,2)
 
 
   do j=1,ny
@@ -644,6 +662,37 @@
 !     wqp_sec(i,j,1)  = zero
     enddo
   enddo
+
+  do k=2,nzm
+       
+    km1 = k - 1
+    if (k==2) then 
+       ku=3
+       kd=2
+    elseif (k==nzm) then
+
+       ku=nzm
+       kd=nzm-1
+
+    else
+
+       ku=k
+       kd=k-1
+    endif
+
+    do j=1,ny
+      do i=1,nx
+
+! Calculate diffusive flux of MSE from diffusive fluxes of temperature, moisture, 
+! and condensate computed by the vertical diffusion solver
+        wthl_sec(i,j,k) =  wthl_sec(i,j,k-1) - adzl(i,j,k-1)*(dtabsdt(i,j,k-1)     -  &
+                          fac_cond*(dqcldt(i,j,k-1) + dqpldt(i,j,k-1))            -  &
+                          fac_sub* (dqcidt(i,j,k-1) + dqpidt(i,j,k-1)))            -  &
+                          gocp*(tkh(i,j,ku) - tkh(i,j,kd))
+
+      end do
+   end do
+end do
 
 
 ! Integrate prognostic TKE equation forward in time 
@@ -746,11 +795,16 @@
   do j=1,ny
      do i=1,nx
         brunt_int(i,j,:) = interp_center_to_interface(interp_mode, &
-                                                      brunt(i,j,:), zl(i,j,:), zi(i,j,:),sflux(i,j))
+!                                                      brunt(i,j,:), zl(i,j,:), zi(i,j,:),sflux(i,j))
+                                                       brunt(i,j,:), zl(i,j,:), zi(i,j,:))
      enddo ! i
   enddo    ! j 
 
   call eddy_length()   ! Find turbulent mixing length
+
+! test
+  Cek_tke = Ce
+!  Cek_tke(:,:,1) = Ces*cesfac
 
   do k=1,nzm      
      ku = k+1
@@ -761,11 +815,12 @@
      if(k == 1) then
         ku = 2
         kd = 2
-!        Cek = Ces
+!test
+
      elseif(k == nzm) then
         ku = k
         kd = k
-!        Cek = Ces
+
      endif
 
 !     if (dis_opt > 0) then
@@ -853,7 +908,12 @@
 ! Make TKE dissipation term pressure dependent to increase damping at TOA
 !           Cee       = Cek(i,j) * (pt19 + pt51*ratio) * max(one, sqrt(pcrit/prsl(i,j,k)))
 !           Cee       = Cek(i,j) * max(one, sqrt(pcrit/prsl(i,j,k)))
-           Cee       = Cek(i,j,k) * max(one, sqrt(pcrit/prsl(i,j,k)))
+! test
+!           Cee       = Cek(i,j,k) * max(one, sqrt(pcrit/prsl(i,j,k)))
+
+           Cee       = Cek_tke(i,j,k) * max(one, sqrt(pcrit/prsl(i,j,k)))
+!           Cee       = Cek(i,j,k)*Cek_tke(i,j,k) * max(one, sqrt(pcrit/prsl(i,j,k)))
+
 !           Cee       = Cek(i,j) *  max(one, sqrt(pcrit/prsl(i,j,k)))
 
 !intrp ok?
@@ -881,12 +941,13 @@
            wrk1 = wtke + dtn*(a_prod_sh+a_prod_bu)
 
            do itr=1,nitr                        ! iterate for implicit solution
-              wtke   = min(max(min_tke, wtke), max_tke)
+!              wtke   = min(max(min_tke, wtke), max_tke)
+              wtke   = max(min_tke, wtke)
               a_diss = wrk*sqrt(wtke)            ! Coefficient in the TKE dissipation term
               wtke   = wrk1 / (one+a_diss)
               wtke   = tkef1*wtke + tkef2*wtk2   ! tkef1+tkef2 = 1.0
 
-!     if (lprnt .and. i == ipr .and. k<15) write(0,*)' wtke=',wtke,' wtk2=',wtk2,&
+ !     if (lprnt .and. i == ipr .and. k<15) write(0,*)' wtke=',wtke,' wtk2=',wtk2,&
 !        ' a_diss=',a_diss,' a_prod_sh=',a_prod_sh,' a_prod_bu=',a_prod_bu,&
 !        ' wrk1=',wrk1,' kdt=',kdt,' itr=',itr,' k=',k
 
@@ -911,6 +972,52 @@
            tkesbdiss(i,j,k) = rdtn*a_diss*tke(i,j,k) ! TKE dissipation term, epsilon
 
 
+           
+!           if (wrk3 > 0) then
+!           if ( tke(i,j,k)/wrk3 >  5 .and. wrk3 > 10) &
+!           if ( isotropy(i,j,k) > 300. .and.  wthl_sec(i,j,k)  > 5.  ) then 
+!          if ( isotropy(i,j,k) > 300. .and.  k==2  .and. thl_sec(i,j,k) > 2e2 ) then 
+!           if ( tabs(i,j,k) > 325. .or. tke(i,j,k) > 90. .or. tkh(i,j,ku) > 260. ) then         
+!           if ( tabs(i,j,k) > 325. .or. tke(i,j,k) > 70. ) then         
+! if ( tabs(i,j,k) < 150. ) then         
+ if ( tke(i,j,k) > 20. ) then         
+!              if (abs(zl(i,j,k) - 286.346836672232) < 1. .and. k .eq. 12) then
+                  kdd = k -1
+                  if (k==1) kdd=k
+                  print *, "smixt=", smixt(i,j,k), " k=", k," zl=", zl(i,j,k)," zl(k-1)=", zl(i,j,kdd)," zl(k+1)=", zl(i,j,k+1), &
+                  " l_inf=", l_inf(i,j),  &
+                  " tke", tke(i,j,k), " tke(kdd)", tke(i,j,kdd), " tke(ku)", tke(i,j,ku),  &
+                  " brunt=", brunt(i,j,k), " brunt(k-1)=", brunt(i,j,kdd),  &
+                  " brunt(k+1)=", brunt(i,j,k+1), &
+                  " brunt_test=", brunt_test(i,j,k), " brunt_test(k-1)=", brunt_test(i,j,kdd),&
+                       " brunt_test(k+1)=", brunt_test(i,j,k+1), &
+                  " qcl(i,j,k)=", qcl(i,j,k), " qci(i,j,k)=", qci(i,j,k), &
+                  " isotropy=", isotropy(i,j,k) ," tkesbdiss=", tkesbdiss(i,j,k) ,  &
+                  " isotropy(kdd)=", isotropy(i,j,kdd), " isotropy(ku)=", isotropy(i,j,ku), " dtn=", dtn,&
+                  " a_prod_sh=", a_prod_sh, " a_prod_bu=", a_prod_bu, " Cee=", Cee, &
+                  " Cek(i,j,k)=", Cek(i,j,k), &
+                  " tke_orig=", wrk3, " wrk=", wrk, " wrk1=", wrk1," a_diss=", a_diss, &
+                  " def2(i,j,k)=", def2(i,j,k)," tkh(i,j,ku)=", tkh(i,j,ku), "prnum(i,j,ku)=" ,prnum(i,j,ku),  &
+                  " tkh(i,j,kd)=", tkh(i,j,kd), "prnum(i,j,kd)=" ,prnum(i,j,kd), &
+                  " tke_history=", tke_history, &
+                  " tscale1=", tscale1, " thv(i,j,k)=", thv(i,j,k), " sflux(i,j)=", sflux(i,j), &
+                  " wthv_sec(i,j,k)=", wthv_sec(i,j,k), " wthv_sec(i,j,k-1)=", wthv_sec(i,j,kdd),  &
+                  " wthv_sec(i,j,k+1)=", wthv_sec(i,j,k+1),  &
+                  " thl_sec(i,j,k)=", thl_sec(i,j,k) , &
+                  " Cek_tke(i,j,k)=", Cek_tke(i,j,k), &
+                  " Cek_tke(i,j,k) real=", Cek_tke(i,j,k)* max(one, sqrt(pcrit/prsl(i,j,k))), &
+                  " u(i,j,k-1)=", u(i,j,kdd), " u(i,j,k)=", u(i,j,k), " u(i,j,k+1)=", u(i,j,k+1), &
+                  " v(i,j,k-1)=", u(i,j,kdd)," v(i,j,k)=", v(i,j,k)," v(i,j,k+1)=", v(i,j,k+1) , &
+                  " tabs(i,j,k-1)=", tabs(i,j,kdd)," tabs(i,j,k)=", tabs(i,j,k)," tabs(i,j,k+1)=", tabs(i,j,k+1), &
+                  "  rdzw=", one /  (zl(i,j,ku) - zl(i,j,kdd)), "  wrku=" , u(i,j,ku)-u(i,j,kdd), &
+                  " wrkv=", v(i,j,ku)-v(i,j,kdd), " prod=" ,  ((u(i,j,ku)-u(i,j,kdd))**2+ (v(i,j,ku)-v(i,j,kdd))**2)
+ !                 endif
+           endif 
+
+           
+               
+            deallocate(tke_history)
+
 ! Calculate "return-to-isotropy" eddy dissipation time scale, see Eq. 8 in BK13
 
            if (buoy_sgs <= zero) then
@@ -919,26 +1026,7 @@
               isotropy(i,j,k) = min(max_eddy_dissipation_time_scale,          &
                                    tscale1/(one+lambda*buoy_sgs*tscale1*tscale1))
            endif
-           
-           if (wrk3 > 0) then
-           if ( tke(i,j,k)/wrk3 >  5 .and. wrk3 > 10) &
-!           if ( isotropy(i,j,k) > 300. .and.  wthl_sec(i,j,k)  > 5.  ) then 
-                  print *, "smixt=", smixt(i,j,k), " k=", k," zl=", zl(i,j,k), &
-                  " l_inf=", l_inf(i,j),  &
-                  " tke", tke(i,j,k), " brunt=", brunt(i,j,k), " brunt(k-1)=", brunt(i,j,k-1),  &
-                  " brunt_test=", brunt_test(i,j,k), &
-                  " qcl(i,j,k)=", qcl(i,j,k), " qci(i,j,k)=", qci(i,j,k), &
-                  " isotropy=", isotropy(i,j,k) ," tkesbdiss=", tkesbdiss(i,j,k) ,  &
-                  " a_prod_sh=", a_prod_sh, " a_prod_bu=", a_prod_bu, " Cee=", Cee, &
-                  " tke_orig=", wrk3, " wrk=", wrk, " wrk1=", wrk1," a_diss=", a_diss, &
-                  " def2(i,j,k)=", def2(i,j,k)," tkh(i,j,ku)=", tkh(i,j,ku), "prnum(i,j,ku)=" ,prnum(i,j,ku),  &
-                  " tkh(i,j,ku)=", tkh(i,j,kd), "prnum(i,j,kd)=" ,prnum(i,j,kd), &
-!                  " tke_history=", tke_history
-                  " tscale1=", tscale1, " thv(i,j,k)=", thv(i,j,k), " sflux(i,j)=", sflux(i,j), &
-                  " wthv_sec(i,j,k)=", wthv_sec(i,j,k)
-           endif 
-               
-            deallocate(tke_history)
+
 
 ! TKE budget terms
 
@@ -979,8 +1067,10 @@
        isotropy_int(i,j,:) = interp_center_to_interface(interp_mode, &
                                                     isotropy(i,j,:), zl(i,j,:), zi(i,j,:)) 
 !       tke_int(i,j,:)      = interp_center_to_interface(interp_mode, tke(i,j,:),      zl(i,j,:), zi(i,j,:))  
-       tkh_out(i,j,:)          = max(0.,min(tkhmax,interp_center_to_interface(interp_mode,  &
+       tkh_out1(i,j,:)          = max(0.,min(tkhmax,interp_center_to_interface(interp_mode,  &
                                  ck*tke(i,j,:)*isotropy(i,j,:),zl(i,j,:), zi(i,j,:),0.)))
+       tkh_out(i,j,:)          = max(0.,min(tkhmax,interp_center_to_interface(interp_mode,  &
+                                 ck*tke(i,j,:)*isotropy(i,j,:),zl(i,j,:), zi(i,j,:))))
      enddo ! i      
   enddo   ! j  
 
@@ -988,6 +1078,9 @@
 ! Apply background diffusivity to diffusivity values computed by SHOC
   do k=1,nzm-1
      ku = k + 1
+!  do k=1,nzm
+!     ku = k 
+
      do j=1,ny
         do i=1,nx
 
@@ -995,10 +1088,56 @@
 !           tkm(i,j,ku)= tkh_out(i,j,ku)*prnum(i,j,ku) + xkzmo(i,j,k)
            tkh(i,j,ku)= max(tkh_out(i,j,ku), xkzo(i,j,k))
            tkm(i,j,ku)= max(tkh_out(i,j,ku)*prnum(i,j,ku), xkzmo(i,j,k))
+
+ if (  tke(i,j,k) > 20. ) then         
+! if ( tabs(i,j,k) > 325. .or. tke(i,j,k) > 70. ) then         
+! if ( tabs(i,j,k) < 150. .and. k>1) then         
+                  kdd = k -1
+                  if (k==1) kdd=k
+                  print *, "after tkh smixt=", smixt(i,j,k), " k=", k," zl=", zl(i,j,k)," zl(k-1)=", zl(i,j,kdd)," zl(k+1)=", zl(i,j,k+1), &
+                  " l_inf=", l_inf(i,j),  &
+                  " tke", tke(i,j,k), " tke(kdd)", tke(i,j,kdd), " tke(ku)", tke(i,j,k+1),  &
+                  " brunt=", brunt(i,j,k), " brunt(k-1)=", brunt(i,j,kdd),  &
+                  " brunt(k+1)=", brunt(i,j,k+1), &
+                  " brunt_test=", brunt_test(i,j,k), " brunt_test(k-1)=", brunt_test(i,j,kdd),&
+                       " brunt_test(k+1)=", brunt_test(i,j,k+1), &
+                  " qcl(i,j,k)=", qcl(i,j,k), " qci(i,j,k)=", qci(i,j,k), &
+                  " isotropy=", isotropy(i,j,k) , &
+                  " isotropy(kdd)=", isotropy(i,j,kdd), " isotropy(ku)=", isotropy(i,j,k+1), " dtn=", dtn,&
+                  " tkesbdiss(k)=", tkesbdiss(i,j,k) ,  " tkesbdiss(k-1)=", tkesbdiss(i,j,kdd) , &
+                  " tkesbdiss(k+1)=", tkesbdiss(i,j,k+1) , &
+!                  " a_prod_sh=", a_prod_sh, " a_prod_bu=", a_prod_bu, " Cee=", Cee, 
+                  " Cek(i,j,k)=", Cek(i,j,k), &
+!                  " tke_orig=", wrk3, " wrk=", wrk, " wrk1=", wrk1," a_diss=", a_diss, &
+                  " def2(i,j,k)=", def2(i,j,k), &
+                  " tkh(i,j,k)=", tkh(i,j,k), "prnum(i,j,k)=" ,prnum(i,j,k), &
+                  " tkh(i,j,ku)=", tkh(i,j,k+1), "prnum(i,j,ku)=" ,prnum(i,j,k+1),  &
+                  " tkh(i,j,kd)=", tkh(i,j,kdd), "prnum(i,j,kd)=" ,prnum(i,j,kdd), &
+!                  " tke_history=", tke_history, &
+!                  " tscale1=", tscale1, " thv(i,j,k)=",
+                  thv(i,j,k), " sflux(i,j)=", sflux(i,j), &
+                  " wthv_sec(i,j,k)=", wthv_sec(i,j,k), " wthv_sec(i,j,k-1)=", wthv_sec(i,j,kdd),  &
+                  " wthv_sec(i,j,k+1)=", wthv_sec(i,j,k+1),  &
+                  " thl_sec(i,j,k)=", thl_sec(i,j,k) , &
+                  " Cek_tke(i,j,k)=", Cek_tke(i,j,k), &
+                  " Cek_tke(i,j,k) real=", Cek_tke(i,j,k)* max(one, sqrt(pcrit/prsl(i,j,k))), &
+                  " u(i,j,k-1)=", u(i,j,kdd), " u(i,j,k)=", u(i,j,k), " u(i,j,k+1)=", u(i,j,k+1), &
+                  " v(i,j,k-1)=", u(i,j,kdd)," v(i,j,k)=", v(i,j,k)," v(i,j,k+1)=", v(i,j,k+1) , &
+                  " tabs(i,j,k-1)=", tabs(i,j,kdd)," tabs(i,j,k)=", tabs(i,j,k)," tabs(i,j,k+1)=", tabs(i,j,k+1), &
+                  "  rdzw=", one /  (zl(i,j,k+1) - zl(i,j,kdd)), "  wrku=" , u(i,j,k+1)-u(i,j,kdd), &
+                  " wrkv=", v(i,j,k+1)-v(i,j,kdd), " prod=" ,  ((u(i,j,k+1)-u(i,j,kdd))**2+ (v(i,j,k+1)-v(i,j,kdd))**2)
+ !                 endif
+           endif 
+
         
         enddo
      enddo
   enddo
+
+
+  tkh(:,1,1)= tkh(:,1,2)
+  tkm(:,1,1)= tkm(:,1,2)
+
 
 !intrp
 ! debugging code
@@ -1015,7 +1154,11 @@
      enddo   ! j
   enddo     ! k
 
+  tke_int(:,1,1)=tke_int(:,1,2)
  
+
+
+
 
   
 ! Diagnose second order moments of the subgrid PDF following
@@ -1087,7 +1230,8 @@
 
         wrk1 = one / adzi(i,j,k)        ! adzi(k) = (zl(k)-zl(km1))
 !       wrk3 = max(tkh(i,j,k),pt01) * wrk1
-        wrk3 = max(tkh(i,j,k),epsln) * wrk1
+!        wrk3 = max(tkh(i,j,k),epsln) * wrk1
+        wrk3 = tkh(i,j,k) * wrk1
 !intrp 
 !       sm   = half*(isotropy(i,j,k)+isotropy(i,j,km1))*wrk1*wrk3 ! Tau*Kh/dz^2 
         sm   = isotropy_int(i,j,k)*wrk1*wrk3 ! Tau*Kh/dz^2 
@@ -1099,50 +1243,57 @@
 !               No rain, snow or graupel in pdf (Annig, 08/29/2018)
 !                       + (qpl(i,k) - qpl(i,km1)) * fac_cond &
 !                       + (qpi(i,k) - qpi(i,km1)) * fac_sub
-!        wthl_sec_d(i,j,k) = - wrk3 * wrk1
-        wthl_sec(i,j,k) = - wrk3 * wrk1
+        wthl_sec_d(i,j,k) = - wrk3 * wrk1
+!        wthl_sec(i,j,k) = - wrk3 * wrk1
 
-        if (wthl_sec(i,j,k) > 5 ) then
+!        if (wthl_sec(i,j,k) > 50 ) then
+        if ( tabs(i,j,k) < 150. ) then
+           kdd = k -1
+           if (k==1) kdd=k
+
            print *, " wrk1=",  one / adzi(i,j,k) , " wrk3=", wrk3, " tkh(i,j,k)=", tkh(i,j,k), &
-                " wrk1 =", wrk1, " hl(i,j,k)=", hl(i,j,k)," hl(i,j,km1)=", hl(i,j,km1), " k=", k, &
+                " wrk1 =", wrk1, " hl(i,j,k)=", hl(i,j,k)," hl(i,j,km1)=", hl(i,j,kdd), " k=", k, &
                 " km1=", km1, " i=", i, &
                  " wthl_sec(i,j,k)=", wthl_sec(i,j,k), " tabs(i,j,k)=", tabs(i,j,k), " gamaz(i,j,k)=", &
                  gamaz(i,j,k), "  fac_cond*(qcl(i,j,k)+qpl(i,j,k))=",  fac_cond*(qcl(i,j,k)+qpl(i,j,k)), &
                  " fac_sub *(qci(i,j,k)+qpi(i,j,k))=", fac_sub *(qci(i,j,k)+qpi(i,j,k)), &
                  " xkzo(i,j,k) =", xkzo(i,j,k),"  tkh_out(i,j,:)=",  tkh_out(i,j,k), " tke(i,j,:)=", tke(i,j,k), &
-                 " isotropy(i,j,:)=", isotropy(i,j,k), &
+                 " isotropy(i,j,k)=", isotropy(i,j,k)," isotropy(i,j,km1)=", isotropy(i,j,kdd), &
                   "smixt=", smixt(i,j,k), " k=", k," zl=", zl(i,j,k), &
                   " l_inf=", l_inf(i,j),  &
-                  " tke", tke(i,j,k), " brunt=", brunt(i,j,k), " brunt(k-1)=", brunt(i,j,k-1),  &
+                  " tke", tke(i,j,k), " brunt=", brunt(i,j,k), " brunt(k-1)=", brunt(i,j,kdd),  &
                   " brunt_test=", brunt_test(i,j,k), &
                   " qcl(i,j,k)=", qcl(i,j,k), " qci(i,j,k)=", qci(i,j,k), &
                   " isotropy=", isotropy(i,j,k) ," tkesbdiss=", tkesbdiss(i,j,k) ,  &
-                  " a_prod_sh=", a_prod_sh, " a_prod_bu=", a_prod_bu, " Cee=", Cee, &
+                  " a_prod_sh=", a_prod_sh, " a_prod_bu=", a_prod_bu, " Cee=", Cee, " Cek(i,j,k)=", Cek(i,j,k), &
+                  " max(one, sqrt(pcrit/prsl(i,j,k)))=", max(one, sqrt(pcrit/prsl(i,j,k))), &
                   " tke_orig=", wrk3, " wrk=", wrk, " wrk1=", wrk1," a_diss=", a_diss, &
                   " def2(i,j,k)=", def2(i,j,k)," tkh(i,j,ku)=", tkh(i,j,ku), "prnum(i,j,ku)=" ,prnum(i,j,ku),  &
                   " tkh(i,j,ku)=", tkh(i,j,kd), "prnum(i,j,kd)=" ,prnum(i,j,kd), &
 !                  " tke_history=", tke_history
                   " tscale1=", tscale1, " thv(i,j,k)=", thv(i,j,k), " sflux(i,j)=", sflux(i,j), &
-                  " wthv_sec(i,j,k)=", wthv_sec(i,j,k)
+                  " wthv_sec(i,j,k)=", wthv_sec(i,j,k), "  tkh_out(i,j,k)=",  tkh_out(i,j,k),  &
+                  "  tkh_out1(i,j,k)=",  tkh_out1(i,j,k),  &
+                  " tke_int(i,j,k)=", tke_int(i,j,k),  " xkzo(i,j,k)=", xkzo(i,j,k)
 
         endif
 
 ! SGS vertical flux of total water. Eq 2 in BK13
 
         wrk2           = total_water(i,j,k) - total_water(i,j,km1)
-!        wqw_sec_d(i,j,k) = - wrk3 * wrk2
-        wqw_sec(i,j,k) = - wrk3 * wrk2
+        wqw_sec_d(i,j,k) = - wrk3 * wrk2
+!        wqw_sec(i,j,k) = - wrk3 * wrk2
 
-        if (.false.) then
+!        if (.false.) then
 ! Calculate diffusive flux of MSE from diffusive fluxes of temperature, moisture, 
 ! and condensate computed by the vertical diffusion solver
-        wthl_sec(i,j,k) =  wthl_sec(i,j,k-1) - adzl(i,j,k-1)*(dtabsdt(i,j,k-1)     -  &
-                          fac_cond*(dqcldt(i,j,k-1) + dqpldt(i,j,k-1))            -  &
-                          fac_sub* (dqcidt(i,j,k-1) + dqpidt(i,j,k-1)))            -  &
-                          gocp*(tkh(i,j,ku) - tkh(i,j,kd))
+!        wthl_sec(i,j,k) =  wthl_sec(i,j,k-1) - adzl(i,j,k-1)*(dtabsdt(i,j,k-1)     -  &
+!                          fac_cond*(dqcldt(i,j,k-1) + dqpldt(i,j,k-1))            -  &
+!                          fac_sub* (dqcidt(i,j,k-1) + dqpidt(i,j,k-1)))            -  &
+!                          gocp*(tkh(i,j,ku) - tkh(i,j,kd))
 
-        
-!         if (.false.) then
+
+             if (.false.) then
 !        if ( wthl_sec(i,j,k) > 1. ) then 
 !           if (abs((wthl_sec_d(i,j,k)- wthl_sec(i,j,k))/ wthl_sec(i,j,k)) < 10) &
                 
@@ -1167,12 +1318,14 @@
                 " prsl(i,j,k)=", prsl(i,j,k)," tabs(i,j,k)=", tabs(i,j,k)
            
         endif
+
+        
                    
 
 ! Calculate diffusive flux of total water from diffusive fluxes of  moisture
 ! and condensate computed by the vertical diffusion solver                            
-!        wqw_sec(i,j,k) =  wqw_sec(i,j,k-1)  - adzl(i,j,k-1)*(dqwvdt(i,j,k-1)     +  &
-!                                           dqcldt(i,j,k-1) + dqcidt(i,j,k-1))
+        wqw_sec(i,j,k) =  wqw_sec(i,j,k-1)  - adzl(i,j,k-1)*(dqwvdt(i,j,k-1)     +  &
+                                           dqcldt(i,j,k-1) + dqcidt(i,j,k-1))
 
 
 ! Incorrect
@@ -1200,6 +1353,38 @@
 
       enddo ! i  loop
     enddo   ! j  loop
+
+         if (.false.) then
+!         if (k==nzm .and. any(smixt(i,j,1:5)>7000)) then
+!        if ( wthl_sec(i,j,k) > 1. ) then 
+!           if (abs((wthl_sec_d(i,j,k)- wthl_sec(i,j,k))/ wthl_sec(i,j,k)) < 10) &
+                
+                print *, " wthl_sec=", wthl_sec(i,j,1:nzm), new_line ('a'), &!
+                     " wthl_sec_d(k)=", wthl_sec_d(i,j,1:nzm),  new_line ('a'),&
+!                " wthl_sec(k-1)=", wthl_sec(i,j,k-1), &
+                " k=", k, "adzl=", adzl(i,j,1:nzm), new_line ('a')," dtabsdt=", dtabsdt(i,j,1:nzm),  new_line ('a'),&
+                " fac_cond*dqcldt=", fac_cond* dqcldt(i,j,1:nzm),  new_line ('a'),&
+                " fac_cond*dqpldt=", fac_cond* dqpldt(i,j,1:nzm),  new_line ('a'),&
+                " fac_sub*dqcidt=", fac_sub* dqcidt(i,j,1:nzm) ,  new_line ('a'),&
+                " fac_sub*dqpidt=", fac_sub* dqpidt(i,j,1:nzm) ,  new_line ('a'),&
+                " gocp*tkh(ku)=",  gocp*tkh(i,j,1:nzm),  new_line ('a'),&
+!                " gocp*tkh(kd)=",gocp*tkh(i,j,kd), &
+                " tkh(ku)=",  tkh(i,j,ku),  new_line ('a'),&
+ !               " tkh(kd)=", tkh(i,j,kd), &
+                " xkzo(ku)=",  xkzo(i,j,1:nzm),  new_line ('a'),&
+ !               " xkzo(kd)=", xkzo(i,j,kd), &
+!                " whole thing=", adzl(i,j,k-1)*(dtabsdt(i,j,k-1)     -  &
+!                fac_cond*(dqcldt(i,j,k-1) + dqpldt(i,j,k-1))            -  &
+!                fac_sub* (dqcidt(i,j,k-1) + dqpidt(i,j,k-1)))           -  &
+!                gocp*(tkh(i,j,ku) - tkh(i,j,kd)), &
+                " dqwvdt=", dqwvdt(i,j,1:nzm),  new_line ('a'),&
+                " (smixt(i,j,:)=", smixt(i,j,1:nzm)
+!                " rho=", prsl(i,j,k)/(rgas*tabs(i,j,k)*(1+0.622*total_water(i,j,k))), &
+!                " prsl(i,j,k)=", prsl(i,j,k)," tabs(i,j,k)=", tabs(i,j,k)
+           
+        endif
+
+
   enddo     ! k  loop
 
 
@@ -1263,7 +1448,10 @@
 ! Vertical gradient of MSE
                wrk3 =  dthldz(i,j,k)
 
-               wrk  =  Cvv*dts/isotropy(i,j,k)
+! test
+!               wrk  =  Cvv*dts/isotropy(i,j,k)
+               wrk  =  Cvv*Cek(i,j,k)*dts/isotropy(i,j,k)
+
 
                if ( prog_var_solver_type == 1 ) then
 
@@ -1292,10 +1480,25 @@
 !                    wrk3,2*wrk2*wrk3,1 + Cv*dts/isotropy(i,j,k), dts, tune_varthl*detrained_varthl(i,j,k),  &
 !                    wrk1 + 2*wrk2*wrk3 - tune_varthl*detrained_varthl(i,j,k),  &
 !                    (wrk1 + 2*wrk2*wrk3 - tune_varthl*detrained_varthl(i,j,k))*dts, thl_sec(i,j,k), k
-               if (thl_sec(i,j,k) > 2e2) print *, "debug thl", wrk1, wrk2, &
+!               if (thl_sec(i,j,k) > 2e2) &
+!                    if ( tabs(i,j,k) > 325. .or. thl_sec(i,j,k) > 2e2 ) then 
+                    if ( tabs(i,j,k) < 150.) then 
+                       kdd = k -1
+                       if (k==1) kdd=k
+
+                    print *, "debug thl", wrk1, wrk2, &
                     wrk3,2*wrk2*wrk3,1 + half*wrk, 1- half*wrk, dts, tune_varthl*detrained_varthl(i,j,k),  &
                     wrk1 + 2*wrk2*wrk3 - tune_varthl*detrained_varthl(i,j,k),  &
-                    (wrk1 + 2*wrk2*wrk3 - tune_varthl*detrained_varthl(i,j,k))*dts, "thl_sec", thl_sec(i,j,k), k, "wth_sec", wthl_sec(i,j,k), wthl_sec(i,j,k+1),  "hl", hl(i,j,k-1),  hl(i,j,k),  hl(i,j,k+1), one / adzi(i,j,k), "tkh" , max(tkh(i,j,k-1),epsln), tkh(i,j,k),  tkh(i,j,k+1), max(tkh(i,j,k),epsln)/ adzi(i,j,k), "tkh_lin", tke_int(i,j,k-1),  tke_int(i,j,k),  tke_int(i,j,k+1), "tke", tke(i,j,k-1), tke(i,j,k), tke(i,j,k+1), "isotropy", isotropy(i,j,k-1),  isotropy(i,j,k),  isotropy(i,j,k+1), "isotropy_int",  isotropy_int(i,j,k-1), isotropy_int(i,j,k),  isotropy_int(i,j,k+1),  "zi", zi(i,j,k-1),  zi(i,j,k),  zi(i,j,k+1), zi(i,j,k+2), "zl", zl(i,j,k-1),  zl(i,j,k),  zl(i,j,k+1), zl(i,j,k+2), "wthl2", wthl2(i,j,k-1), wthl2(i,j,k), wthl2(i,j,k+1),  wthl2(i,j,k+2), " dwthl2dz",  dwthl2dz(i,j,k-1),  dwthl2dz(i,j,k),  dwthl2dz(i,j,k+1), "w_sec", w_sec(i,j,k-1), w_sec(i,j,k), w_sec(i,j,k+1),  w_sec(i,j,k+2),  w_sec(i,j,k+3), "w_sec_int", w_sec_int(i,j,k-1), w_sec_int(i,j,k), w_sec_int(i,j,k+1),  w_sec_int(i,j,k+2)
+                    (wrk1 + 2*wrk2*wrk3 - tune_varthl*detrained_varthl(i,j,k))*dts, "thl_sec", thl_sec(i,j,k), k, "wth_sec", wthl_sec(i,j,k), wthl_sec(i,j,k+1),  "hl", hl(i,j,kdd),  hl(i,j,k),  hl(i,j,k+1), one / adzi(i,j,k), "tkh" , max(tkh(i,j,kdd),epsln), tkh(i,j,k),  tkh(i,j,k+1), max(tkh(i,j,k),epsln)/ adzi(i,j,k), "tkh_lin", tke_int(i,j,kdd),  tke_int(i,j,k),  tke_int(i,j,k+1), "tke", tke(i,j,kdd), tke(i,j,k), tke(i,j,k+1), "isotropy", isotropy(i,j,kdd),  isotropy(i,j,k),  isotropy(i,j,k+1), "isotropy_int",  isotropy_int(i,j,kdd), isotropy_int(i,j,k),  isotropy_int(i,j,k+1),  "zi", zi(i,j,kdd),  zi(i,j,k),  zi(i,j,k+1), zi(i,j,k+2), "zl", zl(i,j,kdd),  zl(i,j,k),  zl(i,j,k+1), zl(i,j,k+2), "wthl2", wthl2(i,j,kdd), wthl2(i,j,k), wthl2(i,j,k+1),  wthl2(i,j,k+2), " dwthl2dz",  dwthl2dz(i,j,kdd),  dwthl2dz(i,j,k),  dwthl2dz(i,j,k+1), "w_sec", w_sec(i,j,kdd), w_sec(i,j,k), w_sec(i,j,k+1),  w_sec(i,j,k+2),  w_sec(i,j,k+3), "w_sec_int", w_sec_int(i,j,kdd), w_sec_int(i,j,k), w_sec_int(i,j,k+1),  w_sec_int(i,j,k+2), "  tkh_out(i,j,k)=", &
+ tkh_out(i,j,k), "  tkh_out(i,j,k+1)=",  tkh_out(i,j,k+1), "  tkh_out(i,j,k+2)=",  tkh_out(i,j,k+2), &
+" tke_int(i,j,k)=", tke_int(i,j,k), " tke_int(i,j,k+1)=", tke_int(i,j,k+1), " tke_int(i,j,k+2)=", tke_int(i,j,k+2),& 
+" xkzo(i,j,k)=", xkzo(i,j,k), " xkzo(i,j,k+1)=", xkzo(i,j,k+1), " xkzo(i,j,k+2)=", xkzo(i,j,k+2), &
+
+"  tkh_out1(i,j,k)=",  &
+ tkh_out1(i,j,k), "  tkh_out1(i,j,k+1)=",  tkh_out1(i,j,k+1), "  tkh_out1(i,j,k+2)=",  tkh_out1(i,j,k+2)
+
+
+                    endif
 
 
 ! Second moment of total water mixing ratio.
@@ -1335,6 +1538,26 @@
                if ( qw_sec(i,j,k) < 0.) qw_sec(i,j,k) = 0.
 
              enddo ! itr
+
+
+!                    if ( tabs(i,j,k) > 325.  ) then 
+!                       kdd = k -1
+!                       if (k==1) kdd=k
+
+!                    print *, "debug thl", wrk1, wrk2, &
+!                    wrk3,2*wrk2*wrk3,1 + half*wrk, 1- half*wrk, dts, tune_varthl*detrained_varthl(i,j,k),  &
+!                    wrk1 + 2*wrk2*wrk3 - tune_varthl*detrained_varthl(i,j,k),  &
+!                    (wrk1 + 2*wrk2*wrk3 - tune_varthl*detrained_varthl(i,j,k))*dts, "thl_sec", thl_sec(i,j,k), k, "wth_sec", wthl_sec(i,j,k), wthl_sec(i,j,k+1),  "hl", hl(i,j,kdd),  hl(i,j,k),  hl(i,j,k+1), one / adzi(i,j,k), "tkh" , max(tkh(i,j,kdd),epsln), tkh(i,j,k),  tkh(i,j,k+1), max(tkh(i,j,k),epsln)/ adzi(i,j,k), "tkh_lin", tke_int(i,j,kdd),  tke_int(i,j,k),  tke_int(i,j,k+1), "tke", tke(i,j,kdd), tke(i,j,k), tke(i,j,k+1), "isotropy", isotropy(i,j,kdd),  isotropy(i,j,k),  isotropy(i,j,k+1), "isotropy_int",  isotropy_int(i,j,kdd), isotropy_int(i,j,k),  isotropy_int(i,j,k+1),  "zi", zi(i,j,kdd),  zi(i,j,k),  zi(i,j,k+1), zi(i,j,k+2), "zl", zl(i,j,kdd),  zl(i,j,k),  zl(i,j,k+1), zl(i,j,k+2), "wthl2", wthl2(i,j,kdd), wthl2(i,j,k), wthl2(i,j,k+1),  wthl2(i,j,k+2), " dwthl2dz",  dwthl2dz(i,j,kdd),  dwthl2dz(i,j,k),  dwthl2dz(i,j,k+1), "w_sec", w_sec(i,j,kdd), w_sec(i,j,k), w_sec(i,j,k+1),  w_sec(i,j,k+2),  w_sec(i,j,k+3), "w_sec_int", w_sec_int(i,j,kdd), w_sec_int(i,j,k), w_sec_int(i,j,k+1),  w_sec_int(i,j,k+2), "  tkh_out(i,j,k)=", &
+! tkh_out(i,j,k), "  tkh_out(i,j,k+1)=",  tkh_out(i,j,k+1), "  tkh_out(i,j,k+2)=",  tkh_out(i,j,k+2), &
+!" tke_int(i,j,k)=", tke_int(i,j,k), " tke_int(i,j,k+1)=", tke_int(i,j,k+1), " tke_int(i,j,k+2)=", tke_int(i,j,k+2),& 
+!" xkzo(i,j,k)=", xkzo(i,j,k), " xkzo(i,j,k+1)=", xkzo(i,j,k+1), " xkzo(i,j,k+2)=", xkzo(i,j,k+2), &
+
+!"  tkh_out1(i,j,k)=",  &
+! tkh_out1(i,j,k), "  tkh_out1(i,j,k+1)=",  tkh_out1(i,j,k+1), "  tkh_out1(i,j,k+2)=",  tkh_out1(i,j,k+2)
+
+
+!                    endif
+
 
             if (shoc_diag) then
 
@@ -1379,48 +1602,98 @@
 
 contains
 
+  logical function in_cloud(ql, qi)
+
+    real, intent(in) :: ql, qi
+
+    in_cloud = (ql + qi > qt_thresh) .or. (qi > qi_thresh)
+    
+  end function in_cloud
+
   subroutine eddy_length()
 
 ! This subroutine computes the turbulent length scale based on a
 ! formulation described in BK13
 
 ! Local variables
-    real    wrk, wrk1, wrk2, wrk3
+    real    wrk, wrk1, wrk2, wrk3, smixt_type(nx,ny,nzm)
     integer i, j, k, kk, kl, ku, kb, kc, kli, kui
+
+    smixt_type = zero
     
     do j=1,ny
       do i=1,nx
-        cldarr(i,j) = zero
-        numer(i,j)  = zero
-        denom(i,j)  = zero
+
+        cbl_top(i,j) = one !zero
+        cldarr(i,j)  = zero
+        numer(i,j)   = zero
+        denom(i,j)   = zero
       enddo
     enddo
+
+ ! Reinitialize the mixing length related arrays to zero
+!         smixt(i,j,k)    = one   
+          smixt    = epsln 
+          brunt_test    = zero
+
     
 ! Find the length scale outside of clouds
     
-    do k=1,nzm
+!    do k=1,nzm-1
       do j=1,ny
         do i=1,nx
-             
-! Reinitialize the mixing length related arrays to zero
-!         smixt(i,j,k)    = one   
-          smixt(i,j,k)    = epsln 
-          brunt_test(i,j,k)    = zero
+kloop:    do k=1,nzm-1
 
 !Eq. 11 in BK13 (Eq. 4.13 in Pete's dissertation)
 !Outside of cloud, integrate from the surface to the cloud base
 
-!          if (qcl(i,j,k)+qci(i,j,k) <= zero) then 
-           if (qcl(i,j,k)+qci(i,j,k) <= thresh) then
-            tkes       = sqrt(tke(i,j,k)) * adzl(i,j,k)
-            numer(i,j) = numer(i,j) + tkes*zl(i,j,k) ! Numerator   in Eq. 11 in BK13
-            denom(i,j) = denom(i,j) + tkes           ! Denominator in Eq. 11 in BK13
-          else
-            cldarr(i,j) = one   ! Take note of the columns containing cloud.
-          endif
-        enddo
+! old
+!!!          if (qcl(i,j,k)+qci(i,j,k) <= zero) then 
+!!           if (qcl(i,j,k)+qci(i,j,k) <= thresh) then
+!!            tkes       = sqrt(tke(i,j,k)) * adzl(i,j,k)
+!!            numer(i,j) = numer(i,j) + tkes*zl(i,j,k) ! Numerator   in Eq. 11 in BK13
+!!            denom(i,j) = denom(i,j) + tkes           ! Denominator in Eq. 11 in BK13
+!!          else
+!!            cldarr(i,j) = one   ! Take note of the columns containing cloud.
+!!          endif
+
+!           if (cbl_top(i,j) .or. cldarr(i,j) == one ) exit kloop
+
+
+!           if (qcl(i,j,k)+qci(i,j,k) >  thresh) then 
+            if ( in_cloud(qcl(i,j,k),qci(i,j,k)) ) then 
+
+!              cldarr(i,j) = one   ! Take note of the columns containing cloud(s).
+               cldarr(i,j) = k   ! Take note of the columns containing cloud(s).
+              exit kloop
+
+           endif
+
+
+! Look for clear convective boundary layer top
+!           if (sflux(i,j) > 0 .and. &  ! Unstable BL
+!                ((wthv_sec(i,j,k)<=0).and.(wthv_sec(i,j,k)<=wthv_sec(i,j,k+1)))) cbl_top(i,j)=.true.
+          
+
+!           if (qcl(i,j,k)+qci(i,j,k) <= thresh) then
+!           if (cldarr(i,j) == zero ) then
+!           if ( .not.  cbl_top(i,j)) then
+!           if ( cbl_top(i,j) ==  zero) then
+              tkes       = sqrt(tke(i,j,k)) * adzl(i,j,k)
+              numer(i,j) = numer(i,j) + tkes*zl(i,j,k) ! Numerator   in Eq. 11 in BK13
+              denom(i,j) = denom(i,j) + tkes           ! Denominator in Eq. 11 in BK13
+
+!              if (sflux(i,j) > 0 .and.  &  ! Unstable BL
+!!                   ((wthv_sec(i,j,k)<=0).and.(wthv_sec(i,j,k)<=wthv_sec(i,j,k+1)))) cbl_top(i,j)=.true.
+!                   ((wthv_sec(i,j,k) < 0).and.(wthv_sec(i,j,k) < wthv_sec(i,j,k+1)))) cbl_top(i,j)=k
+!           else
+!            if ( cldarr(i,j)>zero )  exit kloop
+!           endif
+
+ 
+        enddo kloop
       enddo
-    enddo
+    enddo 
 
 ! Calculate the measure of PBL depth,  Eq. 11 in BK13 
     do j=1,ny
@@ -1470,8 +1743,9 @@ contains
           wrk = qcl(i,j,k) + qci(i,j,k)
 
 !          if (wrk > zero) then            ! If in the cloud
-          if (wrk > thresh) then            ! If in the cloud
-             
+!          if (wrk > thresh) then            ! If in the cloud
+           if (in_cloud(qcl(i,j,k),qci(i,j,k))) then 
+    
 ! Find the in-cloud Brunt-Vaisalla frequency
                 
              omn = qcl(i,j,k) / (wrk+1.e-20) ! Ratio of liquid water to total water
@@ -1542,19 +1816,63 @@ contains
 
             if (tkes > zero .and. l_inf(i,j) > zero) then
               wrk1 = one / (tscale*tkes*vonk*zl(i,j,k))
-              wrk2 = one / (tscale*tkes*l_inf(i,j))
+!              wrk2 = one / (tscale*tkes*l_inf(i,j))
+
+              if (k < cldarr(i,j)) then 
+                 wrk2 = one / (tscale*tkes*l_inf(i,j))
+              else
+                 wrk2 = one / (tscale*tkes*max_l_inf)
+              endif
               wrk1 = wrk1 + wrk2 + slts * brunt2(i,j,k) / tke(i,j,k)
 !              wrk1 = wrk1 + wrk2 + pt01 * brunt2(i,j,k) / tke(i,j,k)
               wrk1 = sqrt(one / max(wrk1,1.0e-8)) * (one/0.3)
 !             smixt(i,j,k) = min(max_eddy_length_scale, 2.8284*sqrt(wrk1)/0.3)
               smixt(i,j,k) = min(max_eddy_length_scale, wrk1)
 
-              if ( tke(i,j,k) >  40) &
+!              if ( smixt(i,j,k) > 2950.) &
+!              if ( tabs(i,j,k) > 325) &
+!              if ( tke(i,j,k) >  40) &
 !              if ( brunt2(i,j,k) >  1 .and. (wrk <= thresh)) &
-                   print *, "Outside cloud smixt=", smixt(i,j,k),  " k=", k," zl=", zl(i,j,k), "wrk1=",  wrk1,  &
-                   " l_inf=", l_inf(i,j), " wrk2=", wrk2, &
-                   " sqrt(tke)=", sqrt(tke(i,j,k)), " brunt2=", brunt2(i,j,k),  &
-                   " qcl(i,j,k)=", qcl(i,j,k), " qci(i,j,k)=", qci(i,j,k)
+!              if ( brunt2(i,j,k) >  0 .and. (k <= 3)) &
+!              if (  l_inf(i,j) < max_l_inf  .and. (k <= 3)) &
+!              if (  smixt(i,j,k) > 2* max_l_inf ) &
+!              if (  (cbl_top(i,j)  .or.  cldarr(i,j) == one) .and. k == 1) &
+
+!              if (  (cbl_top(i,j) > zero  .or.  cldarr(i,j) > zero) .and. k == 1) &
+!                   print *, "Outside cloud smixt=", smixt(i,j,k),  " k=", k," zl=", zl(i,j,k), &
+!                   "wrk1=", one / (tscale*tkes*vonk*zl(i,j,k)),  &
+!                   " l_inf=", l_inf(i,j), " wrk2=", wrk2, &
+!                   " sqrt(tke)=", sqrt(tke(i,j,k)), " brunt2=", brunt2(i,j,k),  &
+!                   " qcl(i,j,k)=", qcl(i,j,k), " qci(i,j,k)=", qci(i,j,k), &
+!                   " denom(i,j)=", denom(i,j)," numer(i,j)=", numer(i,j), &
+!                   " sflux(i,k)=", sflux(i,j), &
+!                   " brunt_test(i,j,k)=", brunt_test(i,j,k),  " wthv_sec(i,j,:)=", wthv_sec(i,j,k), &
+!                   " cbl_top(i,j)=", cbl_top(i,j), " cldarr(i,j)=", cldarr(i,j), "wrk > thresh", wrk > thresh!, &
+
+
+!              if (  (cbl_top(i,j) > zero  .and.  cldarr(i,j) > zero) .and. k == 1) &
+!                   print *, "First layer smixt=", smixt(i,j,k),  " k=", k," zl=", zl(i,j,k), &
+!                   " denom(i,j)=", denom(i,j)," numer(i,j)=", numer(i,j), " l_inf=", l_inf(i,j),&
+!                   " sqrt(tke)=", sqrt(tke(i,j,k)), " brunt2=", brunt2(i,j,k), &
+!                   " sflux(i,k)=", sflux(i,j), &
+!                   " brunt_test(i,j,k)=", brunt_test(i,j,k), " wthv_sec(i,j,k)=", wthv_sec(i,j,k), &
+!                   " qcl(i,j,k)=", qcl(i,j,k), " qci(i,j,k)=", qci(i,j,k), &!
+
+
+!                   "CBL top smixt=", smixt(i,j,cbl_top(i,j)),  " cbl_top(i,j) =", cbl_top(i,j),  &
+!                   " zl(cbl_top(i,j) )=", zl(i,j,cbl_top(i,j)), &
+!                   " sqrt(tke)=", sqrt(tke(i,j,cbl_top(i,j))), " brunt2=", brunt2(i,j,cbl_top(i,j)),  &
+!                   " brunt_test(i,j,k)=", brunt_test(i,j,cbl_top(i,j)), " wthv_sec(i,j,k)=", wthv_sec(i,j,cbl_top(i,j)), &
+!                   " qcl(i,j,k)=", qcl(i,j,cbl_top(i,j)), " qci(i,j,k)=", qci(i,j,cbl_top(i,j)), &
+
+
+!                   "Cloud bottom smixt=", smixt(i,j,cldarr(i,j)),  " cldarr(i,j) =", cldarr(i,j),  &
+!                   " zl(cldarr(i,j) )=", zl(i,j,cldarr(i,j)), &
+!                   " sqrt(tke)=", sqrt(tke(i,j,cldarr(i,j))), " brunt2=", brunt2(i,j,cldarr(i,j)),  &
+!                   " brunt_test(i,j,k)=", brunt_test(i,j,cldarr(i,j)), " wthv_sec(i,j,k)=", wthv_sec(i,j,cldarr(i,j)), &
+!                   " qcl(i,j,k)=", qcl(i,j,cldarr(i,j)), " qci(i,j,k)=", qci(i,j,cldarr(i,j))
+                   
+
 
               
 !              if (wrk1 > max_eddy_length_scale) print *, "Bndry lr", smixt(i,j,k), wrk1, wrk2, brunt2(i,j,k), tke(i,j,k), one / (tscale*tkes*vonk*zl(i,j,k))
@@ -1564,13 +1882,69 @@ contains
 !           else
 !             smixt(i,j,k) = zero
 !            endif
-                
-           endif
+             endif
              
-        enddo
+           enddo
           
-      enddo
-    enddo
+        enddo
+     enddo
+
+
+    do k=1,nzm
+
+      kb = k-1
+      kc = k+1
+      if (k == 1) then
+        kb = 1
+        kc = 2
+        thedz(:,:) = adzi(:,:,kc)
+      elseif (k == nzm) then
+        kb = nzm-1
+        kc = nzm
+        thedz(:,:) = adzi(:,:,k)
+      else
+        thedz(:,:) = adzi(:,:,kc) + adzi(:,:,k) !  = (z(k+1)-z(k-1))
+      endif
+
+      do j=1,ny
+        do i=1,nx
+
+           if (.false.) &
+!           if (  (cbl_top(i,j) > zero  .and.  cldarr(i,j) > zero) .and. k == 1 &
+!                .and. (( cldarr(i,j) - cbl_top(i,j)) < 11)) &
+                print *, "First layer smixt=", smixt(i,j,k),  " k=", k," zl=", zl(i,j,k), &
+                " denom(i,j)=", denom(i,j)," numer(i,j)=", numer(i,j), " l_inf=", l_inf(i,j),&
+                " sqrt(tke)=", sqrt(tke(i,j,k)), " brunt2=", brunt2(i,j,k), &
+                " sflux(i,k)=", sflux(i,j), &
+                " brunt_test(i,j,k)=", brunt_test(i,j,k), " wthv_sec(i,j,k)=", wthv_sec(i,j,k), &
+                " qcl(i,j,k)=", qcl(i,j,k), " qci(i,j,k)=", qci(i,j,k), &
+                
+                new_line('a') , & 
+
+                "CBL top smixt=", smixt(i,j,cbl_top(i,j)),  " cbl_top(i,j) =", cbl_top(i,j),  &
+                " zl(cbl_top(i,j) )=", zl(i,j,cbl_top(i,j)), &
+                " sqrt(tke)=", sqrt(tke(i,j,cbl_top(i,j))), " brunt2=", brunt2(i,j,cbl_top(i,j)),  &
+                " brunt_test(i,j,k)=", brunt_test(i,j,cbl_top(i,j))," wthv_sec(i,j,k)=", wthv_sec(i,j,cbl_top(i,j)), &
+                " qcl(i,j,k)=", qcl(i,j,cbl_top(i,j)), " qci(i,j,k)=", qci(i,j,cbl_top(i,j)), &
+
+                new_line('a') ,& 
+
+                "Cloud bottom smixt=", smixt(i,j,cldarr(i,j)),  " cldarr(i,j) =", cldarr(i,j),  &
+                " zl(cldarr(i,j) )=", zl(i,j,cldarr(i,j)), &
+                " sqrt(tke)=", sqrt(tke(i,j,cldarr(i,j))), " brunt2=", brunt2(i,j,cldarr(i,j)),  &
+                " brunt_test(i,j,k)=", brunt_test(i,j,cldarr(i,j)), " wthv_sec(i,j,k)=", wthv_sec(i,j,cldarr(i,j)), &
+                " qcl(i,j,k)=", qcl(i,j,cldarr(i,j)), " qci(i,j,k)=", qci(i,j,cldarr(i,j)), &
+
+                new_line('a') , & 
+
+                 " wthv_sec(i,j,:)=", wthv_sec(i,j,1:cldarr(i,j))
+                   
+
+             
+           enddo
+        enddo
+     enddo
+
     
 ! Now find the in-cloud turbulence length scale 
 ! See Eq. 13 in BK13 (Eq. 4.18 in Pete's disseration)  
@@ -1578,7 +1952,8 @@ contains
     do j=1,ny
       do i=1,nx
           
-        if (cldarr(i,j) == 1) then ! If there's a cloud in this column 
+!        if (cldarr(i,j) == 1) then ! If there's a cloud in this column 
+        if (cldarr(i,j) > zero) then ! If there's a cloud in this column 
              
           kl = 0
           ku = 0
@@ -1586,19 +1961,25 @@ contains
                 
 ! Look for the cloud base in this column  
             wrk = qcl(i,j,k) + qci(i,j,k)
-            if (wrk > thresh .and. kl == 0) then
+ !           if (wrk > thresh .and. kl == 0) then
+!            if (in_cloud(qcl(i,j,k),qci(i,j,k)) .and. kl == 0) then
+            if (in_cloud(qcl(i,j,k),qci(i,j,k))  .and. kl == 0) then
               kl = k
             endif
                 
 ! Look for the cloud top in this column
 
             if (cloud_top_at_min_negative_boyu_flux) then   
-! Set cloud top as  the minimum boyuancy flux level
-!             if (wrk > thresh .and. ((wthv_sec(i,j,k)<0).and.(wthv_sec(i,j,k)<wthv_sec(i,j,k+1)))) ku = k
-             if (wrk > thresh .and. ((wthv_sec(i,j,k)<=0).and.(wthv_sec(i,j,k)<=wthv_sec(i,j,k+1)))) ku = k
+! Set cloud top as  the minimum negative boyuancy flux level or cloud water below threshold
+               if (kl > zero .and. (wthv_sec(i,j,k)<0 .and. wthv_sec(i,j,k)<wthv_sec(i,j,k+1)) .or. &
+                    (in_cloud(qcl(i,j,k),qci(i,j,k)) .and. .not. in_cloud(qcl(i,j,k+1),qci(i,j,k+1)))) ku = k
+!               if (kl > zero .and. (wthv_sec(i,j,k)<0 .and. wthv_sec(i,j,k)<wthv_sec(i,j,k+1)) .or. &
+!                    (wrk > thresh .and. qcl(i,j,k+1)+qci(i,j,k+1) <= thresh) ) ku = k
             else 
 ! Set cloud top as the level with cloud condensate below threshold
-             if (wrk > thresh .and. qcl(i,j,k+1)+qci(i,j,k+1) <= thresh) ku = k
+!             if (wrk > thresh .and. qcl(i,j,k+1)+qci(i,j,k+1) <= thresh) ku = k
+                 if   ( in_cloud(qcl(i,j,k),qci(i,j,k)) .and. .not. in_cloud(qcl(i,j,k+1),qci(i,j,k+1)) ) ku = k
+
             endif
 
                 
@@ -1619,6 +2000,8 @@ contains
                enddo
                conv_var = conv_var**oneb3
 
+               smixt_type(i,j,kl:ku) = conv_var
+           
                 
               if (conv_var > 0) then 
 
@@ -1645,34 +2028,208 @@ contains
 !           endif
    
                   if (wrk> zero) then
+
+!                     smixt_type(i,j,k) = one
 !                     if ((one/0.3)*sqrt(one/wrk) > depth .and. tke(i,j,kk) > min_tke) & 
 !                          if ( depth > max_eddy_length_scale.and. (one/0.3)*sqrt(one/wrk) > max_eddy_length_scale .and. tke(i,j,kk) >  40) &
 
 
-                     smixt(i,j,kk) = min(max_eddy_length_scale, (one/0.3)*sqrt(one/wrk))
-!                     smixt(i,j,kk) = min(depth, (one/0.3)*sqrt(one/wrk))
+!                     smixt(i,j,kk) = min(max_eddy_length_scale, (one/0.3)*sqrt(one/wrk))
+                     smixt(i,j,kk) = min(depth, (one/0.3)*sqrt(one/wrk))
 
-                         if ( tke(i,j,kk) >  40) &
-!                            if ( brunt2(i,j,kk) >  1) &
-                          print *, "In-cloud smixt=",  smixt(i,j,kk) , " k=", k, " kk=", kk, &
-                          " kl=",kl," ku=",ku,  " depth=", depth," conv_var=", conv_var, &
-                          " sqrt(tke)=", sqrt(tke(i,j,kk)), " brunt2=", brunt2(i,j,kk),  &
-                          " qcl(i,j,k)=", qcl(i,j,kk), " qci(i,j,k)=", qci(i,j,kk)
+!!                         if ( smixt(i,j,kk) >  2950. .and. kl < 4) &
+!                         if ( tabs(i,j,kk) >  325) &
+!!                         if ( tke(i,j,kk) >  40) &
+!!                            if ( brunt2(i,j,kk) >  1) &
+!                          print *, "In-cloud smixt=",  smixt(i,j,kk) , " k=", k, " kk=", kk, &
+!                          " kl=",kl," ku=",ku,  " depth=", depth," conv_var=", conv_var, &
+!                          " sqrt(tke)=", sqrt(tke(i,j,kk)), " brunt2=", brunt2(i,j,kk),  &
+!                          " qcl(i,j,k)=", qcl(i,j,kk), " qci(i,j,k)=", qci(i,j,kk), &
+!                          " adzi(i,j,kl)=", adzi(i,j,kl), " adzl(i,j,kl)=", adzl(i,j,kl), &
+!                          " thv(i,j,kk)=", thv(i,j,kk), " tabs(i,j,kk)=", tabs(i,j,kk), &
+!                          " new smixt+", depth*sqrt(sqrt(tke(i,j,kk))/conv_var)
+
+
+
 
 
                   endif
 
-                enddo
+               enddo
                       
               endif ! If convective vertical velocity scale > 0
+
+
+!           if (  flag .and. (conv_var > 0.) .and. (cbl_top(i,j) == one  .and.  cldarr(i,j) > zero) .and. k == ku &
+
+           if ( .false. & !  flag &
+!           if (  k==nzm-3 &
+!                .and. (( cldarr(i,j) - cbl_top(i,j)) < 11)) 
+!                .and. (ku - kl > 0 ) .and. kl < 5 ) then 
+!               .and. any(tke(i,j,:)>5.)) then 
+!              .and. any(tabs(i,j,:)<150.)) then 
+
+              .and. ((lprnt .and. i == ipr .and. any(tabs(i,j,:)<220.)) &
+               .or. any(tke(i,j,:)>20.))) then 
+
+                ku = nzm -1
+                print *, "First layer smixt=", smixt(i,j,1),  " k=", k," zl=", zl(i,j,1), &
+                " denom(i,j)=", denom(i,j)," numer(i,j)=", numer(i,j), " l_inf=", l_inf(i,j),&
+!                " sqrt(tke)=", sqrt(tke(i,j,1)), " brunt2=", brunt2(i,j,1), &
+                " sflux(i,k)=", sflux(i,j), &
+                " brunt_test(i,j,k)=", brunt_test(i,j,1), & !" wthv_sec(i,j,k)=", wthv_sec(i,j,k), &
+!                " qcl(i,j,k)=", qcl(i,j,k), " qci(i,j,k)=", qci(i,j,k), &
+                
+                new_line('a') , & 
+
+!                "CBL top smixt=", smixt(i,j,cbl_top(i,j)),  " cbl_top(i,j) =", cbl_top(i,j),  &
+!                " zl(cbl_top(i,j) )=", zl(i,j,cbl_top(i,j)), &
+!                " sqrt(tke)=", sqrt(tke(i,j,cbl_top(i,j))), " brunt2=", brunt2(i,j,cbl_top(i,j)),  &
+!                " brunt_test(i,j,k)=", brunt_test(i,j,cbl_top(i,j))," wthv_sec(i,j,k)=", wthv_sec(i,j,cbl_top(i,j)), &
+!                " qcl(i,j,k)=", qcl(i,j,cbl_top(i,j)), " qci(i,j,k)=", qci(i,j,cbl_top(i,j)), &
+
+!                new_line('a') ,& 
+
+                "Cloud bottom smixt=", smixt(i,j,cldarr(i,j)),  " cldarr(i,j) =", cldarr(i,j),  &
+                " zl(bottom )=", zl(i,j,kl), &
+                 "kl=",kl," ku=",ku,  " depth=", depth," conv_var=", conv_var, &
+                 
+                 new_line('a') , &
+
+                 " thv(i,j,kk)=", thv(i,j,1:ku+1), &
+
+                 new_line('a') , &
+
+                 " tabs(i,j,kk)=", tabs(i,j,1:ku+1), &
+
+!                " sqrt(tke)=", sqrt(tke(i,j,cldarr(i,j))), " brunt2=", brunt2(i,j,cldarr(i,j)),  &
+!                " brunt_test(i,j,k)=", brunt_test(i,j,cldarr(i,j)), " wthv_sec(i,j,k)=", wthv_sec(i,j,cldarr(i,j)), &
+!                " qcl(i,j,k)=", qcl(i,j,cldarr(i,j)), " qci(i,j,k)=", qci(i,j,cldarr(i,j)), &
+
+                new_line('a') , & 
+
+ !                " wthv_sec(i,j,:)=", wthv_sec(i,j,1:cldarr(i,j))
+                " wthv_sec(i,j,:)=", wthv_sec(i,j,1:ku+1), &
+
+                new_line('a') , & 
+
+                 " smixt(i,j,:)=", smixt(i,j,1:ku+1), &
+
+!                new_line('a') , & 
+
+!                " new smixt(i,j,:)=", depth*sqrt(sqrt(tke(i,j,kl:ku))/conv_var), &
+
+                new_line('a') , & 
+
+                " tke(i,j,:)=", tke(i,j,1:ku+1), &
+
+                new_line('a') , & 
+
+                " qt(i,j,:)=", qcl(i,j,1:ku+1)+qci(i,j,1:ku+1) 
+
+                flag = .false.
+
+             endif
+
+
+
               kl = zero
               ku = zero
            endif ! if inside the cloud layer
+
+           if ( .false.  .and. k==nzm-3 &
+!                .and. (( cldarr(i,j) - cbl_top(i,j)) < 11)) 
+!                .and. (ku - kl > 0 ) .and. kl < 5 ) then 
+!               .and. any(tke(i,j,:)>5.)) then 
+!              .and. any(tabs(i,j,:)<150.)) then 
+
+!              .and. ((lprnt .and. i == ipr .and. any(tabs(i,j,:)<220.)) &
+!               .or. any(tke(i,j,:)>20.))) then 
+!           .and. any(tke(i,j,:)>20.)) then 
+           .and. any(smixt(i,j,1:5)>7000.)) then 
+              
+                kl =1
+                ku = nzm -1
+                print *, "First layer smixt=", smixt(i,j,1),  " k=", k," zl=", zl(i,j,1), &
+                " denom(i,j)=", denom(i,j)," numer(i,j)=", numer(i,j), " l_inf=", l_inf(i,j),&
+!                " sqrt(tke)=", sqrt(tke(i,j,1)), " brunt2=", brunt2(i,j,1), &
+                " sflux(i,k)=", sflux(i,j), &
+                " brunt_test(i,j,k)=", brunt_test(i,j,1), & !" wthv_sec(i,j,k)=", wthv_sec(i,j,k), &
+!                " qcl(i,j,k)=", qcl(i,j,k), " qci(i,j,k)=", qci(i,j,k), &
                 
-          enddo   ! k=2,nzm-3
-        endif     ! if in the cloudy column
-      enddo       ! i=1,nx
-    enddo         ! j=1,ny
+                new_line('a') , & 
+
+!                "CBL top smixt=", smixt(i,j,cbl_top(i,j)),  " cbl_top(i,j) =", cbl_top(i,j),  &
+!                " zl(cbl_top(i,j) )=", zl(i,j,cbl_top(i,j)), &
+!                " sqrt(tke)=", sqrt(tke(i,j,cbl_top(i,j))), " brunt2=", brunt2(i,j,cbl_top(i,j)),  &
+!                " brunt_test(i,j,k)=", brunt_test(i,j,cbl_top(i,j))," wthv_sec(i,j,k)=", wthv_sec(i,j,cbl_top(i,j)), &
+!                " qcl(i,j,k)=", qcl(i,j,cbl_top(i,j)), " qci(i,j,k)=", qci(i,j,cbl_top(i,j)), &
+
+!                new_line('a') ,& 
+
+                "Cloud bottom smixt=", smixt(i,j,cldarr(i,j)),  " cldarr(i,j) =", cldarr(i,j),  &
+                " zl(bottom )=", zl(i,j,kl), &
+                 "kl=",kl," ku=",ku,  " depth=", depth," conv_var=", conv_var, &
+                 
+!                 new_line('a') , &
+
+!                 " thv(i,j,kk)=", thv(i,j,1:ku+1), &
+
+                 new_line('a') , &
+
+                 " tabs(i,j,kk)=", tabs(i,j,1:ku+1), &
+
+!                " sqrt(tke)=", sqrt(tke(i,j,cldarr(i,j))), " brunt2=", brunt2(i,j,cldarr(i,j)),  &
+!                " brunt_test(i,j,k)=", brunt_test(i,j,cldarr(i,j)), " wthv_sec(i,j,k)=", wthv_sec(i,j,cldarr(i,j)), &
+!                " qcl(i,j,k)=", qcl(i,j,cldarr(i,j)), " qci(i,j,k)=", qci(i,j,cldarr(i,j)), &
+
+                new_line('a') , & 
+
+                " wthv_sec(i,j,:)=", wthv_sec(i,j,1:ku+1), &
+
+
+                 new_line('a') , & 
+
+                " brunt(i,j,:)=", brunt(i,j,1:ku+1), &
+
+                
+                 new_line('a') , & 
+
+                " brunt_test(i,j,:)=", brunt_test(i,j,1:ku+1), &
+
+
+                new_line('a') , & 
+
+                " smixt(i,j,:)=", smixt(i,j,1:ku+1), &
+
+                new_line('a') , & 
+
+                " smixt_type(i,j,:)=", smixt_type(i,j,1:ku+1), &
+
+
+!                new_line('a') , & 
+
+!                " new smixt(i,j,:)=", depth*sqrt(sqrt(tke(i,j,kl:ku))/conv_var), &
+
+                new_line('a') , & 
+
+                " tke(i,j,:)=", tke(i,j,1:ku+1), &
+
+                new_line('a') , & 
+
+                " qt(i,j,:)=", qcl(i,j,1:ku+1)+qci(i,j,1:ku+1) 
+
+                flag = .false.
+
+              kl = zero
+              ku = zero
+           endif 
+
+                
+        enddo   ! k=2,nzm-3
+     endif     ! if in the cloudy column
+  enddo       ! i=1,nx
+enddo         ! j=1,ny
     
 ! Constraints on eddy length scale values
 
@@ -1705,7 +2262,9 @@ contains
                 
 
 !             if (qcl(i,j,kb) == 0 .and. qcl(i,j,k) > 0 .and. brunt2(i,j,k) > 1.e-4) then
-             if (qcl(i,j,kb) + qci(i,j,kb) < thresh .and. qcl(i,j,k) + qci(i,j,k) >= thresh .and. brunt2(i,j,k) > 1.e-4) then
+             if ( in_cloud(qcl(i,j,k),qci(i,j,k)) .and. .not. in_cloud(qcl(i,j,kb),qci(i,j,kb)) .and. &
+                   brunt2(i,j,k) > 1e-4 ) then  
+!             if (qcl(i,j,kb) + qci(i,j,kb) < thresh .and. qcl(i,j,k) + qci(i,j,k) >= thresh .and. brunt2(i,j,k) > 1.e-4) then
 !             if (qcl(i,j,kb)  < thresh .and. qcl(i,j,k) >= thresh .and. brunt2(i,j,k) > 1.e-4) then
 
                 smixt(i,j,k) = wrk
@@ -1715,8 +2274,8 @@ contains
 !             if (smixt(i,j,k) > max_eddy_length_scale .and. zl(i,j,k) <=max_eddy_length_scale) &
 !                  smixt(i,j,k) = max_eddy_length_scale
 
-             if ( tke(i,j,k) >  40) &
-                  print *, "smixt=",  " k=", k," zl=", zl(i,j,k), &
+             if ( tke(i,j,k) >  50) &
+                  print *, "smixt=", smixt (i,j,k), " k=", k," zl=", zl(i,j,k), &
                   " l_inf=", l_inf(i,j),  &
                   " sqrt(tke)=", sqrt(tke(i,j,k)), " brunt2=", brunt2(i,j,k),  &
                   " qcl(i,j,k)=", qcl(i,j,k), " qci(i,j,k)=", qci(i,j,k)
@@ -1809,7 +2368,7 @@ contains
 !intrp
 !         avew = half*(w_sec(i,j,k)+w_sec(i,j,kb)) ! Interpolate second moment of w to the interface
           avew = w_sec_int(i,j,k)
-!          avew_save(i,j,k)=avew
+          avew_save(i,j,k)=avew
 !          cond_w = 1.2*sqrt(max(1.0e-20,2.*avew*avew*avew)) 
 !          cond_w_save(i,j,k)=cond_w
 !          if (shoc_version == 1) then
@@ -1940,7 +2499,7 @@ contains
     integer i,j,k,ku,kd, iter
     real wrk, wrk1, wrk2, wrk3, wrk4, bastoeps, eps_ss1, eps_ss2
 
-    real c_w_thl, c_w_qw, c_thl_qw, cond_w, cond_hl, lqs1, lqs2, beta1no_l, beta2no_l
+    real c_w_thl, c_w_qw, c_thl_qw, cond_w, cond_hl, lqs1, lqs2, beta1no_l, beta2no_l, max_w_skw_var
 
 !   bastoeps = basetemp / epsterm
 
@@ -2050,13 +2609,21 @@ contains
 
           if (variable_normalized_width_w == .true. .or. &
                larson_golaz_05_skew == .true.               )  then
+!! Correlation of w and thl
+!             c_w_thl  = max(-one,min(one,wthlsec/max(sqrtw2,w_tol)/max(sqrtthl,thl_tol)))
+!! Correlation of w and qw
+!             c_w_qw   = max(-one,min(one,wqwsec  /max(sqrtw2,w_tol)/max(sqrtqt, rt_tol)))
+!! Correlation of w and qw
+!             c_thl_qw = max(-one,min(one,qwthlsec/max(sqrtthl,thl_tol)/ &
+!                                                     max(sqrtqt, rt_tol)))
+
 ! Correlation of w and thl
-             c_w_thl  = max(-one,min(one,wthlsec/max(sqrtw2,w_tol)/max(sqrtthl,thl_tol)))
+             c_w_thl  = wthlsec/max(sqrtw2,w_tol)/max(sqrtthl,thl_tol)
 ! Correlation of w and qw
-             c_w_qw   = max(-one,min(one,wqwsec  /max(sqrtw2,w_tol)/max(sqrtqt, rt_tol)))
+             c_w_qw   = wqwsec  /max(sqrtw2,w_tol)/max(sqrtqt, rt_tol)
 ! Correlation of w and qw
-             c_thl_qw = max(-one,min(one,qwthlsec/max(sqrtthl,thl_tol)/ &
-                                                     max(sqrtqt, rt_tol)))
+             c_thl_qw = qwthlsec/max(sqrtthl,thl_tol)/ max(sqrtqt, rt_tol)
+
           endif
              
 
@@ -2074,17 +2641,8 @@ contains
              w2_2   = zero
              aterm  = half
              onema  = half
+             sqrtw2t = one
           ELSE
-
-!            cond_w = max_w_skw*max(w3_tol,sqrtw2*sqrtw2*sqrtw2)
-             cond_w = max_w_skw*sqrtw2*sqrtw2*sqrtw2
-!             cond_w_save(i,j,k)=cond_w
-             w3var= max(-cond_w, min(cond_w,w3var))
-!             w3var_save(i,j,k) = w3var  
-! Skewness of vertical velocity PDF
-             Skew_w = w3var / (sqrtw2*sqrtw2*sqrtw2)     ! Moorthi
-!            if (Skew_w < -2 ) print *, " Skew_w=",Skew_w," w3var=", w3var," sqrtw2=", sqrtw2
-!             Skew_w_save(i,j,k) = Skew_w
 
 
 ! Calculate normalized variances of w gaussians
@@ -2099,6 +2657,27 @@ contains
             endif
 
             w2_2 = w2_1
+
+
+
+            wrk  = 1 - 2*atmin
+            wrk1 = 1 - w2_1*w2_1
+            wrk1 = 4*wrk1*wrk1*wrk1
+            max_w_skw_var= wrk * sqrt(wrk1/(1-wrk*wrk))
+!            if (max_w_skw_var<max_w_skw) print *, "max_w_skw_var=", max_w_skw_var
+
+!            cond_w = max_w_skw*max(w3_tol,sqrtw2*sqrtw2*sqrtw2)
+!             cond_w = max_w_skw*sqrtw2*sqrtw2*sqrtw2
+             cond_w = max_w_skw_var*sqrtw2*sqrtw2*sqrtw2
+             cond_w_save(i,j,k)=cond_w
+             w3var= max(-cond_w, min(cond_w,w3var))
+!             w3var_save(i,j,k) = w3var  
+! Skewness of vertical velocity PDF
+             Skew_w = w3var / (sqrtw2*sqrtw2*sqrtw2)     ! Moorthi
+!            if (Skew_w < -2 ) print *, " Skew_w=",Skew_w," w3var=", w3var," sqrtw2=", sqrtw2
+             Skew_w_save(i,j,k) = Skew_w
+
+
                 
 ! Compute relative weight of the first PDF "plume" 
 ! See Eq A4 in Pete's dissertaion -  Ensure 0.01 < a < 0.99
@@ -2121,7 +2700,25 @@ contains
             w2_1 = w2_1 * w_sec(i,j,k)
             w2_2 = w2_2 * w_sec(i,j,k)
 
+
+
           ENDIF
+
+
+          if (variable_normalized_width_w == .true. .or. &
+               larson_golaz_05_skew == .true.               )  then
+! Normalize correlation of w and thl
+!             c_w_thl  = sign(max(-one,min(one,abs(c_w_thl)/sqrtw2t)), c_w_thl)
+             c_w_thl  = max(-one,min(one,c_w_thl/sqrtw2t))
+! Normalize correlation of w and qw
+!             c_w_qw   = sign(max(-one,min(one,abs(c_w_qw)/sqrtw2t)), c_w_qw)
+             c_w_qw   = max(-one,min(one,c_w_qw/sqrtw2t))
+! Normalize correlation of w and qw
+!             c_thl_qw = max(-one,min(one,c_thl_qw))
+                                         
+
+          endif
+
              
 !  Find parameters of the  PDF of liquid/ice static energy
 
@@ -2191,9 +2788,14 @@ contains
             else !  larson_golaz_05_skew == .true.
                
                ! Eqns 34 and 35 in LG05
-               thl2_1= thlsec * min(max_thl_norm_var, max(zero,(one - (c_w_thl/sqrtw2t)**2)/aterm * &
+!               thl2_1= thlsec * min(max_thl_norm_var, max(zero,(one - (c_w_thl/sqrtw2t)**2)/aterm * &
+!                       (beta_factor*oneb3 + aterm*(1-twoby3*beta_factor))))
+!               thl2_2= thlsec * min(max_thl_norm_var, max(zero,(one - (c_w_thl/sqrtw2t)**2)/onema * &
+!                       (one - (beta_factor*oneb3 + aterm*(1-twoby3*beta_factor)))))
+
+               thl2_1= thlsec * min(max_thl_norm_var, max(zero,(one - (c_w_thl)**2)/aterm * &
                        (beta_factor*oneb3 + aterm*(1-twoby3*beta_factor))))
-               thl2_2= thlsec * min(max_thl_norm_var, max(zero,(one - (c_w_thl/sqrtw2t)**2)/onema * &
+               thl2_2= thlsec * min(max_thl_norm_var, max(zero,(one - (c_w_thl)**2)/onema * &
                        (one - (beta_factor*oneb3 + aterm*(1-twoby3*beta_factor)))))
 
 
@@ -2320,14 +2922,17 @@ contains
              ENDIF
 
           else  ! larson_golaz_05_skew == .true.
-             
-             testvar =  sqrt((one-(c_w_thl/sqrtw2t)**2)*(one-(c_w_qw/sqrtw2t)**2))
+             if (sqrtw2t == 0. .or. (one-(c_w_thl)**2)*(one-(c_w_qw)**2)<0.) print *, "sqrtw2t=", sqrtw2t, "(one-(c_w_thl)**2)*(one-(c_w_qw)**2) =", (one-(c_w_thl)**2)*(one-(c_w_qw)**2), " c_w_thl=", c_w_thl, " c_w_qw=", c_w_qw, &
+             " wthlsec=", wthlsec, " sqrtw2=", sqrtw2, " w_tol=",w_tol, " sqrtthl=",sqrtthl," thl_tol=", thl_tol
+!             testvar =  sqrt((one-(c_w_thl/sqrtw2t)**2)*(one-(c_w_qw/sqrtw2t)**2))
+             testvar =  sqrt((one-(c_w_thl)**2)*(one-(c_w_qw)**2))
              
              if (testvar == 0) then
                 r_qwthl_1 = zero
              else
                 ! Eqn 36 in  Larson and Golaz (2005)   
-                r_qwthl_1 = max(-one,min(one,(c_thl_qw - c_w_thl*c_w_qw/sqrtw2t**2)/testvar))
+!                r_qwthl_1 = max(-one,min(one,(c_thl_qw - c_w_thl*c_w_qw/sqrtw2t**2)/testvar))
+                r_qwthl_1 = max(-one,min(one,(c_thl_qw - c_w_thl*c_w_qw)/testvar))
                   
              endif
 
@@ -2997,11 +3602,17 @@ contains
              end if
 
 ! Modification of Eq. 26 in GLC02
-        if (k == 1) then
-           Cek(i,j,k) = Ces * Cesfac
-        else
-           Cek(i,j,k) = Ce  * Cefac
-        endif
+
+!test
+!        if (k == 1) then
+!           Cek(i,j,k) = Ces * Cesfac
+!        else
+!            Cek(i,j,k) = Ce  * Cefac
+!        endif
+
+
+!        Cek(i,j,k) = Cv * max(one, sqrt(pcrit/prsl(i,j,k)))     
+        Cek(i,j,k) = 1.
 !Apply additional damping for the PDFs with values of the individual gaussian weights
 ! in the ranges (atmin:atmin_damp) and  (atmax:atmax_damp) 
         if (aterm < atmin_damp) Cek(i,j,k)=Cek(i,j,k) * (one + at_damp_strength*(one - & 
@@ -3015,12 +3626,56 @@ contains
 !                                           (atmax-aterm)/(atmax-atmax_damp)))
 
 
+ if (.false.) then
+!         if (k==nzm .and. any(smixt(i,j,1:5)>7000)) then
+!        if ( any(wthv_sec(i,j,1:10) > 0.5 )) then 
+!           if (abs((wthl_sec_d(i,j,k)- wthl_sec(i,j,k))/ wthl_sec(i,j,k)) < 10) &
+                print *, " wthv_sec=", wthv_sec(i,j,1:nzm), new_line ('a'), &!    
+                " wthl_sec=", wthl_sec(i,j,1:nzm), new_line ('a'), &!
+                     " wthl_sec_d(k)=", wthl_sec_d(i,j,1:nzm),  new_line ('a'),&
+                     " wqw_sec=", wqw_sec(i,j,1:nzm), new_line ('a'), &!
+                     " wqw_sec_d=", wqw_sec_d(i,j,1:nzm), new_line ('a'), &!
+                     " epsv * thv(i,j,k) wqw_sec=", epsv*thv(i,j,1:nzm)*wqw_sec(i,j,1:nzm), new_line ('a'), &!
+
+!                " wthl_sec(k-1)=", wthl_sec(i,j,k-1), &
+ !               " k=", k, "adzl=", adzl(i,j,1:nzm), new_line ('a')," dtabsdt=", dtabsdt(i,j,1:nzm),  new_line ('a'),&
+ !               " fac_cond*dqcldt=", fac_cond* dqcldt(i,j,1:nzm),  new_line ('a'),&
+ !               " fac_cond*dqpldt=", fac_cond* dqpldt(i,j,1:nzm),  new_line ('a'),&
+ !               " fac_sub*dqcidt=", fac_sub* dqcidt(i,j,1:nzm) ,  new_line ('a'),&
+!                " fac_sub*dqpidt=", fac_sub* dqpidt(i,j,1:nzm) ,  new_line ('a'),&
+!                " gocp*tkh(ku)=",  gocp*tkh(i,j,1:nzm),  new_line ('a'),&
+!                " gocp*tkh(kd)=",gocp*tkh(i,j,kd), &
+                " tkh(ku)=",  tkh(i,j,1:nzm),  new_line ('a'),&
+ !               " tkh(kd)=", tkh(i,j,kd), &
+!                " xkzo(ku)=",  xkzo(i,j,1:nzm),  new_line ('a'),&
+ !               " xkzo(kd)=", xkzo(i,j,kd), &
+                " thermo term=", adzl(i,j,1:nzm)*(dtabsdt(i,j,1:nzm)     -  &
+                fac_cond*(dqcldt(i,j,1:nzm) + dqpldt(i,j,1:nzm))            -  &
+                fac_sub* (dqcidt(i,j,1:nzm) + dqpidt(i,j,1:nzm))),  new_line ('a')          , &
+                " diff term+", gocp*(tkh(i,j,2:nzm) - tkh(i,j,1:nzm-1)),  new_line ('a'), &
+!                " dqwvdt=", dqwvdt(i,j,1:nzm),  new_line ('a'),&
+                " (smixt(i,j,:)=", smixt(i,j,1:nzm)
+!                " rho=", prsl(i,j,k)/(rgas*tabs(i,j,k)*(1+0.622*total_water(i,j,k))), &
+!                " prsl(i,j,k)=", prsl(i,j,k)," tabs(i,j,k)=", tabs(i,j,k)
+           
+        endif
+
+
+
+
 !          if  (wthl2 (i,j,k) > 10 ) &
 !               if  ((thl_sec(i,j,k) > 1e2) .and. (aterm > atmin_damp .and. aterm < atmax_damp)) &
 !             if  ((thl_sec(i,j,k) > 1e2) .and. (aterm < atmin_damp .or. aterm > atmax_damp)) &  
 !                  if  ((abs(wthl2(i,j,k)) > 1e1) .and. (aterm < atmin_damp .or. aterm > atmax_damp) .and. abs(Skew_w) < 3. ) & 
 !        if  ((abs(wthl2(i,j,k)) > 1e1) .and. (aterm > atmin_damp .and. aterm < atmax_damp)) &  
-        if  ((thl_sec(i,j,k) > 2e2)) &
+
+!        if  ((thl_sec(i,j,k) > 2e2)) &
+
+             if  ((tabs(i,j,k) < 150 )) & !.and. k==1)) &
+
+!             if  ((wthv_sec(i,j,k) > 1.95e-2)) & !.and. k==1)) &
+
+!        if  (Cek(i,j,k)>5) &
 
                print *, "aterm=", aterm, "  w1_1=",w1_1,"  w_first=", w_first, "  w2_1=",w2_1, &
                "  sqrtw2=",sqrtw2,"  sqrt(w_sec)=",sqrt(w_sec(i,j,k)) ,  "  w_sec=",w_sec(i,j,k) ,&
@@ -3030,8 +3685,11 @@ contains
                "  thl1_1=",thl1_1,"  thl_first=", thl_first," thl2_1=",  thl2_1, "  thl_sec=", sqrtthl, &
                "  thl1_2=",thl1_2," thl2_2=",  thl2_2, &
                " w3var=", w3var, " Skew_w=",Skew_w," Skew_hl=",Skew_hl, " Skew_qw=",Skew_qw,i,k, &
-               "wrk=", wrk,"(one - w2_1)=",(one - w2_1), &
-               "  thlsec=", thlsec,  "  wthlsec=", wthlsec,"  qwsec=", qwsec,  "  wqwlsec=", wqwsec, &
+               "wrk=", wrk,"(one - w2_1)=",(one - w2_1), " wthv_sec(i,j,k)=", wthv_sec(i,j,k),  &
+               "  thlsec=", thlsec,  "  wthlsec=", wthlsec,"  qwsec=", qwsec,  "  wqwsec=", wqwsec, &
+               "  bastoeps =", onebeps * thv(i,j,k), " wrk =", epsv * thv(i,j,k), &
+               " wqls=", wqls, " ql1", ql1,  " ql2", ql2, &
+               " wqis=", wqls, " qi1", ql1,  " qi2", ql2, &
                "  w3var=",w3var, "  w_sec=",w_sec(i,j,k) , &
                "  wrk*w3var=",wrk*w3var, " beta_factor*oneb3*thlsec=", beta_factor*oneb3*thlsec, &
                " wrk*(one-beta_factor*oneb3)*wthlsec * wqwsec=", wrk*(one-beta_factor*oneb3)*wthlsec * wthlsec, &
@@ -3041,18 +3699,21 @@ contains
                aterm*(w1_1 - w_first)*((thl1_1 - thl_first)**2 + thl2_1) &
                + onema*(w1_2 - w_first)*((thl1_2 - thl_first)**2 + thl2_2), &
                " c_w_thl=", c_w_thl, " sqrtw2t=", sqrtw2t, &
-               " (one - (c_w_thl/sqrtw2t)**2)/aterm=", (one - (c_w_thl/sqrtw2t)**2)/aterm, &
-               " (one - (c_w_thl/sqrtw2t)**2)/onema=", (one - (c_w_thl/sqrtw2t)**2)/onema, &
+ !              " (one - (c_w_thl/sqrtw2t)**2)/aterm=", (one - (c_w_thl/sqrtw2t)**2)/aterm, &
+!               " (one - (c_w_thl/sqrtw2t)**2)/onema=", (one - (c_w_thl/sqrtw2t)**2)/onema, &
                " (beta_factor*oneb3 + aterm*(1-twoby3*beta_factor))=", (beta_factor*oneb3 + aterm*(1-twoby3*beta_factor)), &
-               " Cek(i,j,k)=", Cek(i,j,k)
+               " Cek(i,j,k)=", Cek(i,j,k), " Ce  * Cefac=", Ce  * Cefac, &
+               gamaz(i,j,k), fac_cond*(diag_ql+qpl(i,j,k)), &
+                                                  fac_sub *(diag_qi+qpi(i,j,k)), &
+                      tkesbdiss(i,j,k) * (dtn/cp), tke(i,j,k)
 
                
 
 
-!          if  ( k == 4 .and. Skew_w < -5.) print *, "avew=", avew_save(i,j,k-1:k+1),"  cond_w=",cond_w_save(i,j,k-1:k+1), &
-!              "  z=", z_save(i,j,k-1:k+1), & 
-!               "  w3=",w3_save(i,j,k-1:k+1),"  w3var=",w3var_save(i,j,k-1:k+1), "  w_sec=",w_sec_save(i,j,k-1:k+1), &
-!               "  Skew_w=",Skew_w_save(i,j,k-1:k+1)  
+          if  ( k == 2 .and. Skew_w > 8. .and. thl_sec(i,j,k) > 2e2) print *, "avew=", avew_save(i,j,k-1:k+1),"  cond_w=",cond_w_save(i,j,k-1:k+1), &
+              "  z=", z_save(i,j,k-1:k+1), & 
+               "  w3=",w3_save(i,j,k-1:k+1),"  w3var=",w3var_save(i,j,k-1:k+1), "  w_sec=",w_sec_save(i,j,k-1:k+1), &
+               "  Skew_w=",Skew_w_save(i,j,k-1:k+1)  
 
 !          if  ( wqw2 (i,j,k) < -10 )  &
 !               print *, "wrk=", wrk,"(one - w2_1)=",(one - w2_1), &

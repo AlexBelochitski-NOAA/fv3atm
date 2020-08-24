@@ -106,12 +106,12 @@
 ! measurments of Pr in SBL show substantial scatter around unity when plotted against
 ! M-O stability parameter z/L. However, dependence emerges when Pr is plotted against
 ! gradient Richardson number  (e.g. Li, D. 2019, Atmospheric Research, 216, 86-105)
-      logical, parameter :: Pr_is_unity_in_SBL = .false.
+      logical, parameter :: Pr_is_unity_in_SBL = .true. ! .false.
 ! Original GFS used Pr-Ri dependence above PBL based on Kim and Mahrt, 1992, Tellus, 44A
-      logical, parameter :: PrRi_Kim_Marht_92 = .false.
+      logical, parameter :: PrRi_Kim_Marht_92 = .true. !.false.
 ! Empirical function of Venayagamoorthy and Stretch, 2010, J. of Fluid Mechanics, 644
 ! For consistency with M-O derived values, Pr in neutral limit is assumed to be unity. 
-      logical, parameter :: PrRi_Venayagamoorthy_Stretch_2010 = .true.
+      logical, parameter :: PrRi_Venayagamoorthy_Stretch_2010 = .false. ! .true.
 ! 
 !
 !-----------------------------------------------------------------------
