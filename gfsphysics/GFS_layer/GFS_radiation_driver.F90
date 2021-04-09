@@ -1223,6 +1223,8 @@
       real(kind=kind_phys), dimension(size(Grid%xlon,1)) :: alb1d
       real(kind=kind_phys) :: cdfz
 
+      real (kind=kind_phys) :: hour, year, month
+
       real(kind=kind_phys), dimension(size(Grid%xlon,1),Model%levr+ltp) :: cldtausw
       real(kind=kind_phys), dimension(size(Grid%xlon,1),Model%levr+ltp) :: cldtaulw
 
@@ -1239,6 +1241,10 @@
 !## CCPP ##* GFS_rrtmg_pre.F90/GFS_rrtmg_pre_run for code required to run before 
 ! SW and LW.
       if (.not. (Model%lsswr .or. Model%lslwr )) return
+
+      month = Model%jdat(2)
+      year  = Model%jdat(1)
+      hour  = Model%jdat(5)
 
 !--- set commonly used integers
       me    = Model%me
@@ -1862,6 +1868,7 @@
                         sfcalb, dz, delp, de_lgth,              &
                                 Radtend%coszen, Model%solcon,   &
                         nday, idxday, im, lmk, lmp, Model%lprnt,&
+                        Grid%xlon,Grid%xlat,hour,month,year,    &
                         htswc, Diag%topfsw, Radtend%sfcfsw,     &      !  ---  outputs
                         cldtausw,                               &
                         hsw0=htsw0, fdncmp=scmpsw)                     ! ---  optional
@@ -1871,6 +1878,7 @@
                         sfcalb, dz, delp, de_lgth,              &
                                 Radtend%coszen, Model%solcon,   &
                         nday, idxday, IM, LMK, LMP, Model%lprnt,&
+                        Grid%xlon,Grid%xlat,hour,month,year,    &
                         htswc, Diag%topfsw, Radtend%sfcfsw,     &      !  ---  outputs 
                         cldtausw,                               &
                         FDNCMP=scmpsw)                                 ! ---  optional 
@@ -1978,6 +1986,7 @@
                       clouds, Tbd%icsdlw, faerlw, Radtend%semis,   &
                       tsfg, dz, delp, de_lgth,                     &
                             im, lmk, lmp, Model%lprnt,             &
+                      Grid%xlon,Grid%xlat,hour,month,year,         &
                       htlwc, Diag%topflw, Radtend%sfcflw, cldtaulw,&        !  ---  outputs
                       hlw0=htlw0)                                           !  ---  optional
         else
@@ -1985,6 +1994,7 @@
                       clouds, Tbd%icsdlw, faerlw, Radtend%semis,   &
                       tsfg, dz, delp, de_lgth,                     &
                             IM, LMK, LMP, Model%lprnt,             &
+                            Grid%xlon,Grid%xlat,hour,month,year,   &
                       htlwc, Diag%topflw, Radtend%sfcflw, cldtaulw)         !  ---  outputs
         endif
 !*## CCPP ##
@@ -2151,6 +2161,70 @@
 
       endif                                ! end_if_lssav
 !*## CCPP ##
+
+     if ( Model%gen_nn_training_set_rad) then
+
+!            print *, "in radiation driver: Model%gen_nn_training_set_rad=", Model%gen_nn_training_set_rad                  
+            Diag%NNRad_solcon      = Model%solcon
+            Diag%NNRad_year        = year
+            Diag%NNRad_month       = month
+            Diag%NNRad_cosz        = Radtend%coszen
+            Diag%NNRad_lat         = Grid%xlat
+            Diag%NNRad_lon         = Grid%xlon
+
+            Diag%NNRad_sfcemis     = Radtend%semis
+            Diag%NNRad_sfcalb1     = sfcalb(:,1)
+            Diag%NNRad_sfcalb2     = sfcalb(:,2)
+            Diag%NNRad_sfcalb3     = sfcalb(:,3)
+            Diag%NNRad_sfcalb4     = sfcalb(:,4)
+
+            Diag%NNRad_lw_topflx_upfxc     = Diag%topflw%upfxc
+            Diag%NNRad_lw_topflx_upfx0     = Diag%topflw%upfx0
+            Diag%NNRad_lw_sfcflx_upfxc     = Radtend%sfcflw%upfxc
+            Diag%NNRad_lw_sfcflx_upfx0     = Radtend%sfcflw%upfx0
+            Diag%NNRad_lw_sfcflx_dnfx0     = Radtend%sfcflw%dnfx0
+            Diag%NNRad_lw_sfcflx_dnfxc     = Radtend%sfcflw%dnfxc
+
+            Diag%NNRad_sw_topflx_dnfxc     = Diag%topfsw%dnfxc
+            Diag%NNRad_sw_topflx_upfxc     = Diag%topfsw%upfxc
+            Diag%NNRad_sw_topflx_upfx0     = Diag%topfsw%upfx0
+            Diag%NNRad_sw_sfcflx_upfxc     = Radtend%sfcfsw%upfxc
+            Diag%NNRad_sw_sfcflx_upfx0     = Radtend%sfcfsw%upfx0
+            Diag%NNRad_sw_sfcflx_dnfx0     = Radtend%sfcfsw%dnfx0
+            Diag%NNRad_sw_sfcflx_dnfxc     = Radtend%sfcfsw%dnfxc
+
+
+!         do k = 1, LM                                                                                                      
+!             do i = 1, IM                                                                                                  
+
+            Diag%NNRad_plyr        = plyr
+            Diag%NNRad_tlyr        = tlyr
+            Diag%NNRad_plvl(:,1:43)        = plvl(:,1:43)
+            Diag%NNRad_tlvl(:,1:43)        = tlvl(:,1:43)
+            Diag%NNRad_plvl(:,44:64)        = plvl(:,45:65)
+            Diag%NNRad_tlvl(:,44:64)        = tlvl(:,45:65)
+            Diag%NNRad_qlyr        = qlyr
+            Diag%NNRad_olyr        = olyr
+            Diag%NNRad_clouds1     = clouds(:,:,1)
+            Diag%NNRad_clouds2     = clouds(:,:,2)
+            Diag%NNRad_clouds3     = clouds(:,:,3)
+            Diag%NNRad_clouds4     = clouds(:,:,4)
+            Diag%NNRad_clouds5     = clouds(:,:,5)
+            Diag%NNRad_clouds6     = clouds(:,:,6)
+            Diag%NNRad_clouds7     = clouds(:,:,7)
+            Diag%NNRad_clouds8     = clouds(:,:,8)
+            Diag%NNRad_clouds9     = clouds(:,:,9)
+            Diag%NNRad_hlwc        = htlwc
+            Diag%NNRad_hswc        = htswc
+!            Diag%NNRad_cldtau      = 0                                                                                     
+
+
+!             enddo ! i                                                                                                     
+!          enddo ! k                                                                                                        
+
+
+    endif
+
       return
 !........................................
       end subroutine GFS_radiation_driver

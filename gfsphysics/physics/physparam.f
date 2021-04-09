@@ -300,6 +300,10 @@
 !> initial permutaion seed for mcica radiation
       integer, save :: ipsd0   = 0
       integer, save :: ipsdlim = 1e8
+! Flags for NN radiation                                                                                                    
+      logical, save :: do_swnn = .false. !< Flag for using neural network emulation of SW radiation                         
+      logical, save :: do_lwnn = .false.  !< Flag for using neural network emulation of LW radiation                        
+      logical, save :: gen_nn_training_set_rad = .false. !< Flag for generation of NN training data set for radiation   
 !
 !...................................!
       end module physparam          !

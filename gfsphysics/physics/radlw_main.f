@@ -284,7 +284,7 @@
 !
       use physparam,        only : ilwrate, ilwrgas, ilwcliq, ilwcice,  &
      &                             isubclw, icldflg, iovrlw,  ivflip,   &
-     &                             kind_phys
+     &                             kind_phys, do_lwnn
       use physcons,         only : con_g, con_cp, con_avgd, con_amd,    &
      &                             con_amw, con_amo3
       use mersenne_twister, only : random_setseed, random_number,       &
@@ -294,6 +294,8 @@
 !
       use module_radlw_avplank, only : totplnk
       use module_radlw_ref,     only : preflog, tref, chi_mls
+
+      use neural
 !
       implicit none
 !
@@ -464,6 +466,7 @@
      &       clouds,icseed,aerosols,sfemis,sfgtmp,                      &
      &       dzlyr,delpin,de_lgth,                                      &
      &       npts, nlay, nlp1, lprnt,                                   &
+     &       xlon,xlat,hour,month,year,                                 &
      &       hlwc,topflx,sfcflx,cldtau,                                 &    !  ---  outputs
      &       HLW0,HLWB,FLXPRF                                           &   !! ---  optional
      &     )
@@ -656,6 +659,7 @@
       real (kind=kind_phys), dimension(npts,nlay,nbands,3),intent(in):: &
      &       aerosols
 
+      real (kind=kind_phys), intent(in)::hour,year,month,xlon(:),xlat(:)
 !  ---  outputs:
       real (kind=kind_phys), dimension(npts,nlay), intent(out) :: hlwc
       real (kind=kind_phys), dimension(npts,nlay), intent(out) :: cldtau
@@ -717,6 +721,16 @@
 !
 !===> ... begin here
 !
+
+! NN Emulation of Radiation                                                                                                 
+      if (do_lwnn) then
+       call  lw_nn_emulation
+     &     ( plyr,plvl,tlyr,tlvl,qlyr,olyr,gasvmr,                       &                                                  
+     &       clouds,iovrlw,aerosols,sfemis,                               &                                                 
+     &       NPTS, NLAY, NLP1, ivflip, lprnt, xlon,xlat,hour,month,year, &                                                  
+     &       hlwc,topflx,sfcflx)
+       return
+      endif
 
 !  --- ...  initialization
 
@@ -1475,6 +1489,9 @@
      &               - ( exp_tbl(i) / (f_one - exp_tbl(i)) ) )
         endif
       enddo
+
+! Initialize NN radiation module                                                                                            
+        if(do_lwnn) call init_lw_nn_emulator(me,heatfac)
 
 !...................................
       end subroutine rlwinit

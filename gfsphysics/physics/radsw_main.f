@@ -414,7 +414,7 @@
 !
       use physparam,        only : iswrate, iswrgas, iswcliq, iswcice,  &
      &                             isubcsw, icldflg, iovrsw,  ivflip,   &
-     &                             iswmode, kind_phys
+     &                             iswmode, kind_phys, do_swnn
       use physcons,         only : con_g, con_cp, con_avgd, con_amd,    &
      &                             con_amw, con_amo3
 
@@ -423,6 +423,8 @@
      &                             random_stat
       use module_radsw_ref, only : preflog, tref
       use module_radsw_sflux
+
+      use neural
 !
       implicit none
 !
@@ -595,7 +597,8 @@
      &       dzlyr,delpin,de_lgth,                                      &
      &       cosz,solcon,NDAY,idxday,                                   &
      &       npts, nlay, nlp1, lprnt,                                   &
-     &       hswc,topflx,sfcflx,cldtau,                                 &   !  ---  outputs
+     &       xlon,xlat,hour,month,year,                                 &   
+     &       hswc,topflx,sfcflx,  cldtau,                               &   !  ---  outputs
      &       HSW0,HSWB,FLXPRF,FDNCMP                                    &   ! ---  optional
      &     )
 
@@ -794,6 +797,8 @@
       real (kind=kind_phys), intent(in) :: cosz(npts), solcon,          &
      &       de_lgth(npts)
 
+      real (kind=kind_phys), intent(in)::hour,year,month,xlon(:),xlat(:)
+
 !  ---  outputs:
       real (kind=kind_phys), dimension(npts,nlay), intent(out) :: hswc
       real (kind=kind_phys), dimension(npts,nlay), intent(out) :: cldtau
@@ -847,6 +852,29 @@
       integer, dimension(nlay) :: indfor, indself, jp, jt, jt1
 
       integer :: i, ib, ipt, j1, k, kk, laytrop, mb
+
+! NN Emulation of Radiation                                                                                                 
+!      if(do_swnn) then                                                                                                     
+!       call  sw_nn_emulation                                                                                               
+!     &     ( plyr,plvl,tlyr,tlvl,qlyr,olyr,gasvmr,                      &                                 !                
+!     &       clouds,iovrsw,aerosols,sfcalb,                               &                               !                
+!     &       cosz,solcon,NDAY,idxday,                                   &                                 !                
+!     &       npts, NLAY, NLP1, ivflip, lprnt,xlon,xlat,month,year,       &                                !                
+!     &       hswc,topflx,sfcflx                                         &                                 !                
+!     &,      fdncmp_in=FDNCMP)                                                                                             
+
+      if(do_swnn) then
+       call  sw_nn_emulation
+     &     ( plyr,plvl,tlyr,tlvl,qlyr,olyr,                              &                                                  
+     &       clouds,sfcalb,                                              &                                                  
+     &       cosz,solcon,                                                &                                                  
+     &       npts, NLAY,xlon,xlat,month,year,                            &                                                  
+     &       hswc,topflx,sfcflx                                          &                                                  
+     &,      fdncmp_in=FDNCMP)
+
+       return
+      endif
+
 !
 !===> ... begin here
 !
@@ -1555,6 +1583,9 @@
         tau = bpade * tfn
         exp_tbl(i) = exp( -tau )
       enddo
+
+! Initialize NN radiation module                                                                                            
+      if(do_swnn) call init_sw_nn_emulator(me)
 
       return
 !...................................

@@ -648,6 +648,10 @@ module GFS_typedefs
     logical              :: norad_precip    !< radiation precip flag for Ferrier/Moorthi
     logical              :: lwhtr           !< flag to output lw heating rate (Radtend%lwhc)
     logical              :: swhtr           !< flag to output sw heating rate (Radtend%swhc)
+    logical              :: do_swnn         !< Flag for using neural network emulation of SW radiation              
+    logical              :: do_lwnn         !< Flag for using neural network emulation of LW radiation             
+    logical              :: gen_nn_training_set_rad  !< Flag for generation of NN training data set for radiation
+
 
 !--- microphysical switch
     integer              :: ncld            !< choice of cloud scheme
@@ -1572,6 +1576,71 @@ module GFS_typedefs
                                                                !< for black carbon, organic carbon, and sulfur dioxide         ( ug/m**2/s )
     real (kind=kind_phys), pointer :: aecm  (:,:) => null()    !< instantaneous aerosol column mass densities for
                                                                !< pm2.5, black carbon, organic carbon, sulfate, dust, sea salt ( g/m**2 )
+
+!--- Instantaneous profiles for NN radiation training data set                                                              
+!--- NN inputs                                                                                                              
+
+    real (kind=kind_phys), pointer :: NNRad_solcon(:)      => null()  !<solar constant                                      
+
+    real (kind=kind_phys), pointer :: NNRad_year(:)        => null()  !<current year                                        
+    real (kind=kind_phys), pointer :: NNRad_month(:)       => null()  !<current month                                       
+    real (kind=kind_phys), pointer :: NNRad_cosz(:)     => null()  !<cosine of the solar zenith angle                       
+    real (kind=kind_phys), pointer :: NNRad_lat(:)      => null()  !<lattitude                                              
+    real (kind=kind_phys), pointer :: NNRad_lon(:)      => null()  !<longitude                                              
+
+    real (kind=kind_phys), pointer :: NNRad_plyr(:,:)      => null()  !<layer mean pressure   , mb                          
+    real (kind=kind_phys), pointer :: NNRad_tlyr(:,:)      => null()  !<layer mean temperature, K                           
+    real (kind=kind_phys), pointer :: NNRad_plvl(:,:)      => null()  !<layer mean pressure   , mb                          
+    real (kind=kind_phys), pointer :: NNRad_tlvl(:,:)      => null()  !<layer mean temperature, K                           
+    real (kind=kind_phys), pointer :: NNRad_qlyr(:,:)      => null()  !<layer mean specific humidity, kg/kg                 
+    real (kind=kind_phys), pointer :: NNRad_olyr(:,:)      => null()  !<layer mean ozone mixing ratio, K                    
+
+    real (kind=kind_phys), pointer :: NNRad_sfcemis(:)      => null()  !<surface emissivity                                 
+
+    real (kind=kind_phys), pointer :: NNRad_sfcalb1(:)     => null()  !<surface albedo                                      
+    real (kind=kind_phys), pointer :: NNRad_sfcalb2(:)     => null()  !<surface albedo                                      
+    real (kind=kind_phys), pointer :: NNRad_sfcalb3(:)     => null()  !<surface albedo                                      
+    real (kind=kind_phys), pointer :: NNRad_sfcalb4(:)     => null()  !<surface albedo                                      
+
+    real (kind=kind_phys), pointer :: NNRad_clouds1(:,:)     => null()  !<cloud properties                                  
+    real (kind=kind_phys), pointer :: NNRad_clouds2(:,:)     => null()  !<cloud properties                                  
+    real (kind=kind_phys), pointer :: NNRad_clouds3(:,:)     => null()  !<cloud properties                                  
+    real (kind=kind_phys), pointer :: NNRad_clouds4(:,:)     => null()  !<cloud properties                                  
+    real (kind=kind_phys), pointer :: NNRad_clouds5(:,:)     => null()  !<cloud properties                                  
+    real (kind=kind_phys), pointer :: NNRad_clouds6(:,:)     => null()  !<cloud properties                                  
+    real (kind=kind_phys), pointer :: NNRad_clouds7(:,:)     => null()  !<cloud properties                                  
+    real (kind=kind_phys), pointer :: NNRad_clouds8(:,:)     => null()  !<cloud properties                                  
+    real (kind=kind_phys), pointer :: NNRad_clouds9(:,:)     => null()  !<cloud properties                                  
+!    real (kind=kind_phys), pointer :: NNRad_clouds10(:,:)     => null()  !<cloud properties                                
+!    real (kind=kind_phys), pointer :: NNRad_clouds11(:,:)     => null()  !<cloud properties                                
+
+
+!--- NN outputs                                                                                                             
+
+    real (kind=kind_phys), pointer :: NNRad_hlwc(:,:)     => null()  !< LW heating rate                                     
+
+    real (kind=kind_phys), pointer :: NNRad_lw_topflx_upfxc(:)     => null()  !< LW heating rate                            
+    real (kind=kind_phys), pointer :: NNRad_lw_topflx_upfx0(:)     => null()  !< LW heating rate                            
+
+    real (kind=kind_phys), pointer :: NNRad_lw_sfcflx_upfxc(:)     => null()  !< LW heating rate                            
+    real (kind=kind_phys), pointer :: NNRad_lw_sfcflx_upfx0(:)     => null()  !< LW heating rate                            
+    real (kind=kind_phys), pointer :: NNRad_lw_sfcflx_dnfx0(:)     => null()  !< LW heating rate                            
+    real (kind=kind_phys), pointer :: NNRad_lw_sfcflx_dnfxc(:)     => null()  !< LW heating rate                            
+
+    real (kind=kind_phys), pointer :: NNRad_cldtau(:,:)     => null()  !< LW heating rate                                   
+
+
+    real (kind=kind_phys), pointer :: NNRad_hswc(:,:)     => null()  !< SW heating rate                                     
+
+    real (kind=kind_phys), pointer :: NNRad_sw_topflx_dnfxc(:)     => null()  !< LW heating rate                            
+    real (kind=kind_phys), pointer :: NNRad_sw_topflx_upfxc(:)     => null()  !< LW heating rate                            
+    real (kind=kind_phys), pointer :: NNRad_sw_topflx_upfx0(:)     => null()  !< LW heating rate                            
+
+    real (kind=kind_phys), pointer :: NNRad_sw_sfcflx_upfxc(:)     => null()  !< LW heating rate                            
+    real (kind=kind_phys), pointer :: NNRad_sw_sfcflx_upfx0(:)     => null()  !< LW heating rate                            
+    real (kind=kind_phys), pointer :: NNRad_sw_sfcflx_dnfx0(:)     => null()  !< LW heating rate                            
+    real (kind=kind_phys), pointer :: NNRad_sw_sfcflx_dnfxc(:)     => null()  !< LW heating rate
+
     contains
       procedure :: create    => diag_create
       procedure :: rad_zero  => diag_rad_zero
@@ -2770,6 +2839,9 @@ module GFS_typedefs
     logical              :: norad_precip      = .false.      !< radiation precip flag for Ferrier/Moorthi
     logical              :: lwhtr             = .true.       !< flag to output lw heating rate (Radtend%lwhc)
     logical              :: swhtr             = .true.       !< flag to output sw heating rate (Radtend%swhc)
+    logical              :: do_swnn           = .false.      !< Flag for using neural network emulation of SW radiation     
+    logical              :: do_lwnn           = .false.      !< Flag for using neural network emulation of LW radiation     
+    logical              :: gen_nn_training_set_rad  = .false. !< Flag for generation of NN training data set for radi
 
 !--- Z-C microphysical parameters
     integer              :: ncld              =  1                 !< choice of cloud scheme
@@ -3107,6 +3179,7 @@ module GFS_typedefs
                                fhswr, fhlwr, levr, nfxr, aero_in, iflip, isol, ico2, ialb,  &
                                isot, iems, iaer, icliq_sw, iovr_sw, iovr_lw, ictm, isubc_sw,&
                                isubc_lw, crick_proof, ccnorm, lwhtr, swhtr,                 &
+                               do_swnn, do_lwnn, gen_nn_training_set_rad,                   &
                           ! IN CCN forcing
                                iccn,                                                        &
                           !--- microphysical parameterizations
@@ -3364,6 +3437,9 @@ module GFS_typedefs
       stop
     end if
 #endif
+    Model%do_lwnn          = do_lwnn
+    Model%do_swnn          = do_swnn
+    Model%gen_nn_training_set_rad = gen_nn_training_set_rad
 
 !--- microphysical switch
     Model%ncld             = ncld
@@ -4453,6 +4529,9 @@ module GFS_typedefs
       print *, ' norad_precip      : ', Model%norad_precip
       print *, ' lwhtr             : ', Model%lwhtr
       print *, ' swhtr             : ', Model%swhtr
+      print *, ' do_lwnn           : ', Model%do_lwnn
+      print *, ' do_swnn           : ', Model%do_swnn
+      print *, ' gen_nn_training_set_rad : ', Model%gen_nn_training_set_rad
       print *, ' '
       print *, 'microphysical switch'
       print *, ' ncld              : ', Model%ncld
@@ -5345,6 +5424,71 @@ module GFS_typedefs
     endif
 #endif
 
+
+
+!    if (Model%gen_nn_training_set_rad) then                                                                                
+
+          allocate (Diag%NNRad_solcon(IM))
+          allocate (Diag%NNRad_year(IM))
+          allocate (Diag%NNRad_month(IM))
+          allocate (Diag%NNRad_cosz(IM))
+          allocate (Diag%NNRad_lat(IM))
+          allocate (Diag%NNRad_lon(IM))
+          allocate (Diag%NNRad_plyr(IM,Model%levs))
+          allocate (Diag%NNRad_tlyr(IM,Model%levs))
+          allocate (Diag%NNRad_plvl(IM,Model%levs))
+          allocate (Diag%NNRad_tlvl(IM,Model%levs))
+          allocate (Diag%NNRad_qlyr(IM,Model%levs))
+          allocate (Diag%NNRad_olyr(IM,Model%levs))
+          allocate (Diag%NNRad_clouds1(IM,Model%levs))
+          allocate (Diag%NNRad_clouds2(IM,Model%levs))
+          allocate (Diag%NNRad_clouds3(IM,Model%levs))
+          allocate (Diag%NNRad_clouds4(IM,Model%levs))
+          allocate (Diag%NNRad_clouds5(IM,Model%levs))
+          allocate (Diag%NNRad_clouds6(IM,Model%levs))
+          allocate (Diag%NNRad_clouds7(IM,Model%levs))
+          allocate (Diag%NNRad_clouds8(IM,Model%levs))
+          allocate (Diag%NNRad_clouds9(IM,Model%levs))
+
+          allocate (Diag%NNRad_sfcemis(IM))
+          allocate (Diag%NNRad_sfcalb1(IM))
+          allocate (Diag%NNRad_sfcalb2(IM))
+          allocate (Diag%NNRad_sfcalb3(IM))
+          allocate (Diag%NNRad_sfcalb4(IM))
+
+          allocate (Diag%NNRad_cldtau(IM,Model%levs))
+
+          allocate (Diag%NNRad_hlwc(IM,Model%levs))
+          allocate (Diag%NNRad_lw_topflx_upfxc(IM))
+          allocate (Diag%NNRad_lw_topflx_upfx0(IM))
+!          Diag%NNRad_lw_topflx_upfxc => Diag%topflw(:)%upfxc                                                               
+!          Diag%NNRad_lw_topflx_upfx0 => Diag%topflw(:)%upfx0                                                               
+          allocate (Diag%NNRad_lw_sfcflx_upfxc(IM))
+          allocate (Diag%NNRad_lw_sfcflx_upfx0(IM))
+!          Diag%NNRad_lw_sfcflx_upfxc => Diag%ulwsfci(:)                                                                    
+          allocate (Diag%NNRad_lw_sfcflx_dnfx0(IM))
+          allocate (Diag%NNRad_lw_sfcflx_dnfxc(IM))
+!          Diag%NNRad_lw_sfcflx_dnfxc => Diag%dlwsfci(:)                                                                    
+
+          allocate (Diag%NNRad_cldtau(IM,Model%levs))
+
+          allocate (Diag%NNRad_hswc(IM,Model%levs))
+          allocate (Diag%NNRad_sw_topflx_dnfxc(IM))
+          allocate (Diag%NNRad_sw_topflx_upfxc(IM))
+          allocate (Diag%NNRad_sw_topflx_upfx0(IM))
+!          Diag%NNRad_sw_topflx_dnfxc => Diag%topfsw(:)%dnfxc                                                               
+!          Diag%NNRad_sw_topflx_upfxc => Diag%topfsw(:)%upfxc                                                               
+!          Diag%NNRad_sw_topflx_upfx0 => Diag%topfsw(:)%upfx0                                                               
+          allocate (Diag%NNRad_sw_sfcflx_upfxc(IM))
+ !         Diag%NNRad_sw_sfcflx_upfxc => Diag%uswsfci(:)                                                                    
+          allocate (Diag%NNRad_sw_sfcflx_upfx0(IM))
+          allocate (Diag%NNRad_sw_sfcflx_dnfx0(IM))
+          allocate (Diag%NNRad_sw_sfcflx_dnfxc(IM))
+ !         Diag%NNRad_sw_sfcflx_dnfxc => Diag%dswsfci(:)                                                                    
+
+!    endif 
+
+
     !--- diagnostics for coupled chemistry
     if (Model%cplchm) call Diag%chem_init(IM,Model)
 
@@ -5372,6 +5516,53 @@ module GFS_typedefs
     Diag%topflw%upfx0 = zero
     if (Model%ldiag3d) then
       Diag%cldcov     = zero
+    endif
+
+    if (Model%gen_nn_training_set_rad) then
+
+       Diag%NNRad_solcon      = zero
+       Diag%NNRad_year        = zero
+       Diag%NNRad_month       = zero
+       Diag%NNRad_cosz        = zero
+       Diag%NNRad_lat         = zero
+       Diag%NNRad_lon         = zero
+       Diag%NNRad_plyr        = zero
+       Diag%NNRad_tlyr        = zero
+       Diag%NNRad_plvl        = zero
+       Diag%NNRad_tlvl        = zero
+       Diag%NNRad_qlyr        = zero
+       Diag%NNRad_olyr        = zero
+       Diag%NNRad_sfcemis     = zero
+       Diag%NNRad_sfcalb1     = zero
+       Diag%NNRad_sfcalb2     = zero
+       Diag%NNRad_sfcalb3     = zero
+       Diag%NNRad_sfcalb4     = zero
+       Diag%NNRad_clouds1     = zero
+       Diag%NNRad_clouds2     = zero
+       Diag%NNRad_clouds3     = zero
+       Diag%NNRad_clouds4     = zero
+       Diag%NNRad_clouds5     = zero
+       Diag%NNRad_clouds6     = zero
+       Diag%NNRad_clouds7     = zero
+       Diag%NNRad_clouds8     = zero
+       Diag%NNRad_clouds9     = zero
+       Diag%NNRad_hlwc = zero
+       Diag%NNRad_lw_topflx_upfxc     = zero
+       Diag%NNRad_lw_topflx_upfx0     = zero
+       Diag%NNRad_lw_sfcflx_upfxc     = zero
+       Diag%NNRad_lw_sfcflx_upfx0     = zero
+       Diag%NNRad_lw_sfcflx_dnfx0     = zero
+       Diag%NNRad_lw_sfcflx_dnfxc     = zero
+       Diag%NNRad_cldtau              = zero
+       Diag%NNRad_hswc                = zero
+       Diag%NNRad_sw_topflx_dnfxc     = zero
+       Diag%NNRad_sw_topflx_upfxc     = zero
+       Diag%NNRad_sw_topflx_upfx0     = zero
+       Diag%NNRad_sw_sfcflx_upfxc     = zero
+       Diag%NNRad_sw_sfcflx_upfx0     = zero
+       Diag%NNRad_sw_sfcflx_dnfx0     = zero
+       Diag%NNRad_sw_sfcflx_dnfxc     = zero
+
     endif
 
   end subroutine diag_rad_zero

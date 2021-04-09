@@ -36,6 +36,7 @@
 !hchuang code change [+1L]
 !     NOG3DF  - output, 3-d  file for GFS-GOCART specific       69     !
 !     NOLOGF  - output, log  file                               99     !
+!     NONETF  - output, sw+lw NN radiation coeff. files        104     ! 
 !                                                                      !
 !     NIOFRAD - in/out, temperary radiation data file (shared)  16     !
 !                                                                      !
@@ -83,6 +84,7 @@
 !hchuang code change [+1L]
       integer, parameter :: NOG3DF  = 69
       integer, parameter :: NOLOGF  = 99
+      integer, parameter :: NONETF  = 104
 
 !  --- ...  in/out units
 

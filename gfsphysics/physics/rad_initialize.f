@@ -5,7 +5,8 @@
      &     ( si,levr,ictm,isol,ico2,iaer,ialb,iems,ntcw, num_p2d,       &
      &       num_p3d,npdf3d,ntoz,iovr_sw,iovr_lw,isubc_sw,isubc_lw,     &
      &       icliq_sw,crick_proof,ccnorm,                               &                  
-     &       imp_physics,norad_precip,idate,iflip,me )
+     &       imp_physics,norad_precip,idate,iflip,                      &
+     &       nn_lw_flag, nn_sw_flag, nn_save_flag, me )
 !  ---  outputs: ( none )
 
 ! =================   subprogram documentation block   ================ !
@@ -117,7 +118,7 @@
      &             iovrsw , iovrlw , lcrick , lcnorm , lnoprec,         &
      &             ialbflg, iemsflg, isubcsw, isubclw, ivflip , ipsd0,  &
      &             iswcliq,                                             &
-     &             kind_phys
+     &             kind_phys, do_swnn, do_lwnn, gen_nn_training_set_rad
 
       use module_radiation_driver, only : radinit
 !
@@ -127,6 +128,8 @@
       integer,  intent(in) :: levr, ictm, isol, ico2, iaer, num_p2d,    &
      &       ntcw, ialb, iems, num_p3d, npdf3d, ntoz, iovr_sw, iovr_lw, &
      &       isubc_sw, isubc_lw, icliq_sw, iflip, me, idate(4)
+
+      logical, intent(in) ::  nn_lw_flag, nn_sw_flag, nn_save_flag
 
       real (kind=kind_phys), intent(in) :: si(levr+1)
       integer, intent(in) :: imp_physics
@@ -180,6 +183,10 @@
 
       ivflip = iflip                    ! vertical index direction control flag
 
+      do_swnn = nn_sw_flag                 ! Flag for using neural network emulation of SW radiation                        
+      do_lwnn = nn_lw_flag                 ! Flag for using neural network emulation of LW radiation                        
+      gen_nn_training_set_rad = nn_save_flag   ! Flag for generation of NN training data set for radiation 
+
 !  ---  assign initial permutation seed for mcica cloud-radiation
       if ( isubc_sw>0 .or. isubc_lw>0 ) then
 !       ipsd0 = 17*idate(1)+43*idate(2)+37*idate(3)+23*idate(4) + ipsd0
@@ -197,6 +204,9 @@
      &          ' iflip=',iflip,'  me=',me
         print *,' crick_proof=',crick_proof,                            &
      &          ' ccnorm=',ccnorm,' norad_precip=',norad_precip
+        print *,' do_lwnn=', nn_lw_flag," do_swnn", nn_sw_flag,         &                                                   
+     &           ' gen_nn_training_set_rad=', nn_save_flag
+
       endif
 
       call radinit                                                      &
